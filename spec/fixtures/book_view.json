@@ -1,0 +1,9 @@
+{
+  "language": "javascript",
+  "_id": "_design\/books",
+  "views": {
+    "all": {
+      "map": "function(doc) {\n        if(doc.json_class == 'Book'){\n          emit(doc, null);\n        }\n      }"
+    }
+  }
+}

@@ -1,5 +1,8 @@
 %w[rubygems rake rake/clean fileutils newgem rubigen].each { |f| require f }
+require 'spec/rake/spectask'
+
 require File.dirname(__FILE__) + '/lib/couch_quickie'
+
 
 # Generate all the Rake tasks
 # Run 'rake -T' to see list of generated tasks (from gem root directory)
@@ -23,5 +26,8 @@ end
 require 'newgem/tasks' # load /tasks/*.rake
 Dir['tasks/**/*.rake'].each { |t| load t }
 
-# TODO - want other tests/tasks run by default? Add them to the list
-# task :default => [:spec, :features]
+
+Spec::Rake::SpecTask.new do |t|
+  t.spec_opts = ['--color']
+end
+task :default => :spec
