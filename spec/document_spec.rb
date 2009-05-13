@@ -142,6 +142,33 @@ describe Document do
       end
     end
   end
+  
+  describe 'Designs' do
+    before :all do
+      class Book < Document
+        set_database "http://localhost:5984/books"
+      end
+    end
+    
+    after :all do
+      Book.database.delete!
+    end
+
+    it "should have a design" do
+      design = Book.design
+      design.should be_instance_of( Design )
+      design['document_class'].should == 'Book'
+    end
+    
+    it "should set database for design" do
+      Book.design.database.should == Book.database
+    end
+    
+    it "should save the design" do
+      Book.design.should_not be_new_document
+      Book.database.get( Book.design )['_id'].should == Book.design['_id']
+    end
+  end
 end
 
 

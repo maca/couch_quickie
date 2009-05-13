@@ -96,6 +96,10 @@ module CouchQuickie
       info['doc_count']
     end
     
+    def to_s
+      @url
+    end
+    
     private
     def parse_if( response, opts ) #:nodoc:
       opts[:parse] || opts.delete(:parse).nil? ? JSON.parse( response ) : response

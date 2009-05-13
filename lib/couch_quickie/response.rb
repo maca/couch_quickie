@@ -1,6 +1,8 @@
+
 module CouchQuickie  
   class Response < Hash
-    include Mixins::DBInteractions
+    attr_accessor :database
+    
     
     # Overrides the default []= Hash method converting the key to String prior to updating.
     def []= key, value

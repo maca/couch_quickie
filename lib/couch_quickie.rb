@@ -5,11 +5,11 @@ require 'rest_client'
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 require 'couch_quickie/database'
-require 'couch_quickie/mixins/db_interactions'
 require 'couch_quickie/response'
 require 'couch_quickie/document'
-require 'couch_quickie/view'
+require 'couch_quickie/design'
 require 'couch_quickie/object'
+
 
 module CouchQuickie
   VERSION = '0.0.1'

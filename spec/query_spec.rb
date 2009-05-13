@@ -1,5 +1,9 @@
 require File.dirname(__FILE__) + '/spec_helper.rb'
 
+
+include CouchQuickie
+Database.new('http://127.0.0.1:5984/bookstore_spec').delete!
+
 class Book < CouchQuickie::Document
   set_database 'http://127.0.0.1:5984/bookstore_spec'
 end
@@ -8,12 +12,8 @@ class Magazine < CouchQuickie::Document
   set_database 'http://127.0.0.1:5984/bookstore_spec'
 end
 
-# Empty the database
-Book.database.reset!
-
 
 describe 'Book quering' do
-    
   before :all do
     @books = [
       Book.new( :title => 'I-Ching', :author => 'anonymous', :notes => 'Comments by Richard Wilheim' ),
@@ -33,6 +33,4 @@ describe 'Book quering' do
   it "should find by class" do
     Book.get( :all ).should == @books
   end
-  
-  
 end
