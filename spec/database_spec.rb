@@ -33,7 +33,6 @@ describe Database do
   end
   
   shared_examples_for 'document' do
-    
     it "should post a document" do
       response = @db.post @doc
       doc = get( "#{@url}/#{response['id']}" )
@@ -62,8 +61,9 @@ describe Database do
     end
 
     it "should count documents" do
-      10.times{ post = @db.post @doc }
-      @db.count.should == 10
+      lambda do
+        10.times{ post = @db.post @doc }
+      end.should change( @db, :count ).by(10)
     end
     
     it "should reset the database" do
@@ -84,10 +84,6 @@ describe Database do
       @db.delete doc
       @db.count.should == 0
     end
-    
-    describe 'Errors' do
-      it "should raise argument errors"
-    end
   end
   
   describe 'conventional document' do
@@ -99,7 +95,7 @@ describe Database do
   
   describe 'view' do
     before do
-      @doc = JSON.parse( BOOK_VIEW )
+      @doc  = JSON.parse( BOOK_VIEW )
     end
     it_should_behave_like 'document'
     
@@ -108,5 +104,27 @@ describe Database do
       doc['_id'].should == "_design/books"
     end
   end
-
+  
+  describe 'temp view and bulk save' do
+    before do
+      @docs = [
+          {"beverage" => "beer", :count => 4},
+          {"beverage" => "beer", :count => 2},
+          {"beverage" => "tea",  :count => 3}
+        ]
+      @view = { :map => "function(doc){emit(doc.beverage, doc.count)}", :reduce => "function(beverage,counts){return sum(counts)}" }
+    end
+    
+    it "should create temp view" do
+      @docs.each{ |d| @db.post d }
+      response = @db.temp_view @view
+      response['rows'].first['value'].should == 9
+    end
+    
+    it "should bulk_save an array" do
+      lambda {
+        @db.bulk_save @docs, :atomic => true
+      }.should change( @db, :count ).by(3)
+    end
+  end
 end

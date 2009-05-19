@@ -1,5 +1,3 @@
-require 'json/add/rails'
-
 
 # Provides a simple and generic way of (de)serializing JSON representations of an Object, hopefully it will restore
 # the object to the state prior to serializing.

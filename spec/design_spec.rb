@@ -20,15 +20,15 @@ describe Design, 'for document class' do
   end
   
   it "should require an id" do
-    lambda{ Design.new }.should raise_error
+    lambda{ Design.new }.should raise_error(ArgumentError)
   end
   
   it "should require an id starting with _design" do
-    lambda{ Design.new( '_id' => 'id') }.should raise_error
+    lambda{ Design.new( '_id' => 'id') }.should raise_error(ArgumentError)
   end
   
   it "should not have a design" do
-    Design.design.should be_nil #may not be the case after all
+    Design.design.should be_nil #no design for designs
   end
   
   it "should have views" do
@@ -48,8 +48,8 @@ describe Design, 'for document class' do
     @design['views'].should include( @book_view )
   end
   
-  it "should create a default view for all documents of the class" do
-    @design.views['all'].should == {'map' => "function(doc) { if(doc.json_class == 'Book'){ emit(doc, null); } }"}
+  it "should create a default view for all documents of the class if ['document_class']" do
+    @design.views['all'].should == {'map' => "function(doc) { if(doc.json_class == 'Book'){ emit(doc._id, doc); } }"}
   end
   
   it "should have a database" do
@@ -61,6 +61,8 @@ describe Design, 'for document class' do
   it "should set a default id" do
     @design['_id'].should == '_design/book'
   end
+  
+  it "should recreate design when reseting the database????"
   
   describe 'database interaction' do
     before do
@@ -77,5 +79,5 @@ describe Design, 'for document class' do
       @design.save!
       @design.database.get( @design )['_id'].should == @design['_id']
     end
-  end  
+  end
 end

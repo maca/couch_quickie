@@ -132,7 +132,7 @@ describe Document do
           @calendar['_rev'].should be_nil
         end
         
-        it "should save with a default id" do
+        it "should save with a given id" do
           @calendar.merge!( '_id' => 'my_cal' )
           @calendar.should be_new_document
           lambda { @calendar.save! }.should change( @db, :count ).by(1)
@@ -145,13 +145,10 @@ describe Document do
   
   describe 'Designs' do
     before :all do
+      Database.new("http://localhost:5984/bookstore_specs").delete! rescue nil
       class Book < Document
-        set_database "http://localhost:5984/books"
+        set_database "http://localhost:5984/bookstore_specs"
       end
-    end
-    
-    after :all do
-      Book.database.delete!
     end
 
     it "should have a design" do
@@ -169,6 +166,5 @@ describe Document do
       Book.database.get( Book.design )['_id'].should == Book.design['_id']
     end
   end
+  
 end
-
-

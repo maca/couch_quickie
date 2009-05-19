@@ -4,7 +4,7 @@ require File.join( FIXTURES, 'obj' )
 
 describe Object, 'create from json' do
   before do
-    @array = [1, 2, Obj.new( *%w(a b c d e) ), ['_'], Date.today]
+    @array = [1, 2, Obj.new( *%w(a b c d e) ), [[[['ヽ(´ー｀)ﾉ']]]], Date.today]
     @obj   = Obj.new *@array
   end
   
@@ -15,6 +15,6 @@ describe Object, 'create from json' do
   end
   
   it "should serialize/deserialize within array" do
-    JSON.parse( [@obj, @obj.dup].to_json ).each{ |o| o.to_array.should == @array }
+    JSON.parse( [@obj, @obj].to_json ).each{ |o| o.to_array.should == @array }
   end
 end
