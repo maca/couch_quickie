@@ -10,6 +10,7 @@ require 'couch_quickie/response'
 require 'couch_quickie/database'
 require 'couch_quickie/string_hash'
 require 'couch_quickie/document'
+require 'couch_quickie/mixins/associations'
 require 'couch_quickie/design'
 require 'couch_quickie/object'
 

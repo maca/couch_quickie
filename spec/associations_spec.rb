@@ -6,19 +6,21 @@ Database.new('http://127.0.0.1:5984/bookstore_spec').delete! rescue nil
 class Book < CouchQuickie::Document
   set_database 'http://127.0.0.1:5984/bookstore_spec'
   # belongs_to :author
-  design.save!
+  
 
 end
 
 class Author < CouchQuickie::Document
   set_database 'http://127.0.0.1:5984/bookstore_spec'
   joins :editorials
+  design.save!
   
 end
 
 class Editorial < CouchQuickie::Document
   set_database 'http://127.0.0.1:5984/bookstore_spec'
   joins :books
+  design.save!
   
 end
 
@@ -35,12 +37,18 @@ describe 'associations' do
     @alejo = Author.new( 'name' => 'Alejo Carpentier')
     @alejo.save!
     
+    @penguin = Editorial.new( 'name' => 'Penguin' )
+    @penguin.save!
+    
+    @alfaguara = Editorial.new( 'name' => 'Alfaguara' )
+    @alfaguara.save!
+    
     @books = [
-      Book.new( 'title' => 'Answered Prayers', 'author' => @truman ),
-      Book.new( 'title' => 'El recurso del método', 'author' => @alejo ),
-      Book.new( 'title' => 'In Cold Blood', 'author' => @truman ),
-      Book.new( 'title' => 'Music for Chameleons', 'author' => @truman ),
-      Book.new( 'title' => 'One Christmas', 'author' => @truman )
+      Book.new( 'title' => 'Answered Prayers', 'author' => @truman, 'editorial' => @penguin ),
+      Book.new( 'title' => 'El recurso del método', 'author' => @alejo, 'editorial' => @alfaguara ),
+      Book.new( 'title' => 'A sangre fría', 'author' => @truman, 'editorial' => @alfaguara ),
+      Book.new( 'title' => 'Music for Chameleons', 'author' => @truman, 'editorial' => @penguin ),
+      Book.new( 'title' => 'One Christmas', 'author' => @truman, 'editorial' => @penguin  )
     ]
     @books.each{ |book| book.save! }
     

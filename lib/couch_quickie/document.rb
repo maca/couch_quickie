@@ -6,21 +6,7 @@ module CouchQuickie
     # Expects an attributes hash
     def initialize( constructor = {} )
       super.update( 'json_class' => self.class.to_s )
-      associations.each{ |a| set_ids_for_associations a }
-      self # why do I need this?
-    end
-    
-    private
-    def set_ids_for_associations( association )
-      case association[:kind]
-      when :belongs_to
-        self[ association[:key] ] = self[ association[:name] ]['_id'] if self[ association[:name] ]
-      end
-    end
-    
-    public
-    def each_of( klass )
-      self.each_pair{ |key, val| yield( key, val ) if val.kind_of? klass }
+      self
     end
         
     # It will create a new database document if the Document hasn't been saved or it will update it if it has.
@@ -43,35 +29,32 @@ module CouchQuickie
     # Returns the <tt>_id</tt> attribute
     def id; self['_id']; end
     
+    # Returns the <tt>_rev</tt> attribute
+    def rev; self['_rev']; end
+    
     # It will return false if the document has been allready saved.
-    def new_document?
-      not self['_rev'] && self['_id']
-    end
+    def new_document?; not rev && id; end
     
     # Returns the <tt>Database</tt> which is shared among all instances of the class
-    def database
-      self.class.database
-    end
+    def database; self.class.database; end
     
-    # Quick fix
-    def reset!
-      self.delete('_rev')
-      self
-    end
+    # def each_of( klass )
+    #   each_pair do |key, val| yield( key, val ) if val.kind_of? klass end
+    # end
     
     protected
     def without_associations
       copy = self.dup
-      associations.each{ |joint| copy.delete joint[:name] }
+      associations.each { |joint| copy.delete joint[:name] }
       copy
+    end
+    
+    private
+    def set_ids_for_associations( association )
     end
     
     def associations
       self.class.associations
-    end
-    
-    def associated
-      self.class.associated
     end
     
     class << self
@@ -85,65 +68,51 @@ module CouchQuickie
       
       # Gets all the documents corresponding to a view
       def get( key, opts = {} )
-        if key.is_a? Symbol
-          raise 'There is no view with that name' unless view = design.views[ key.to_s ]
-          #TODO: refactor
-          response = Response.new database.get( "#{@design.id}/_view/#{key}", opts )
-          return response unless view['reduce']
-          response = *response
-        else
-          database.get( key )
-        end
+        return database.get( key ) unless key.is_a? Symbol
+        
+        raise 'There is no view with that name' unless view = design.views[ key.to_s ]
+        response = Response.new database.get( "#{@design.id}/_view/#{key}", opts )
+        response = *response if view['reduce']
+        response
       end
       
-      def associated; @associated; end 
       def associations; @associations; end #:nodoc:
 
-      protected
-      def init_class_instance_variables
-        @associations, @associated = [], []
-      end
+      private      
+      # def has_many( *associated )
+      #   opts  = associated.pop if associated.last.is_a? Hash
+      #   klass = opts.delete(:kind)
+      #   
+      #   for association in joins( associated, :belongs_to, klass )
+      #     name, key  = association[:name], association[:key]
+      #     define_method name do
+      #       self[name] = self[name] || self.class.get( self[key] )
+      #     end
+      #   end
+      # end
       
-      def belongs_to( *associated )
-        if associated.last.is_a? Hash
-          klass = associated.pop.delete(:kind)
-        end
-        
-        for association in joins( associated, :belongs_to, klass )
-          name, key  = association[:name], association[:key]
-          define_method name do
-            self[name] = self[name] || self.class.get( self[key] )
-          end
-        end
-      end
-      
-      def has_many( *associated )
-
-      end
-      
-      
-      private
-      def joins( associated, kind, klass ) #:nodoc:
-        @associated   += associated
-        @associations += associated.map! do |joint| 
-          klass = joint.to_s.classify 
-          { :name => joint.to_s, :kind => kind, :key => "#{klass}_id" }
-        end
-        associated
-      end
+      # def joins( associated, kind, klass ) #:nodoc:
+      #   @associations += associated.map! do |joint| 
+      #     klass = joint.to_s.classify 
+      #     { :name => joint.to_s, :kind => kind, :key => "#{klass}_id" }
+      #   end
+      #   associated
+      # end
 
       protected
       # Sets the database for the Document Class and the associated <tt>Design</tt>
       def set_database( database )
         @database = database.kind_of?( Database ) ? database : Database.new( database )
-        if @design
-          @design.database = @database
-          @design.save! rescue nil
-        end
+        @design.database = @database if @design
+        @design.save! rescue nil
       end
       
       def create_design #:nodoc:
-        @design = Design.new( 'document_class' => self.to_s )
+        @design = Design.new 'document_class' => self.to_s
+      end
+      
+      def init_class_instance_variables
+        @associations = {}
       end
       
       def inherited( klass ) #:nodoc:
