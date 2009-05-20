@@ -1,12 +1,4 @@
 module CouchQuickie
-  class View
-    attr_accessor :map, :reduce
-    
-    def initialize( map, reduce )
-      @map, @reduce = map, reduce
-    end
-  end
-  
   class Design < Document
     attr_reader :database
     
@@ -22,7 +14,7 @@ module CouchQuickie
         }
       end
     end
-        
+            
     def push_view( view )
       views.merge!( view.strigify_keys )
     end
@@ -31,6 +23,13 @@ module CouchQuickie
     
     def database=( database )
       @database = database.kind_of?( Database ) ? database : Database.new( database )
+    end
+    
+    def get( key, opts = {} )
+      raise 'There is no view with that name' unless view = views[ key.to_s ]
+      response = Response.parse database.view( id, key, opts )
+      response = *response if view['reduce']
+      response
     end
     
     private

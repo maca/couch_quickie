@@ -103,7 +103,7 @@ module CouchQuickie
     #   JSON consumers, otherwise it will return a Ruby Hash.
     #   * query: +Hash+
     #   Additional query parameters
-    #   eg. { :query => {:rev => 'aue763h7hiu'} }
+    #   eg. { :query => {:key => 'Person'} }
     def view( design, view, opts = {})
       http_action :get, "#{design}/_view/#{view}", opts
     end
@@ -136,7 +136,7 @@ module CouchQuickie
     # For more info: http://wiki.apache.org/couchdb/HTTP_Bulk_Document_API
     def bulk_save( docs, opts = {} )
       bulk = { :docs => docs }
-      bulk["all_or_nothing"] = true if opts.delete(:atomic)
+      bulk[ "all_or_nothing" ] = true if opts.delete(:atomic)
       http_action :post, '_bulk_docs', opts.merge( :doc => bulk )
     end
     

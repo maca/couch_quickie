@@ -1,4 +1,4 @@
-= leather_couch
+= couch_quickie
 
 * FIX (url)
 

@@ -6,15 +6,24 @@ module CouchQuickie
     # Expects an attributes hash
     def initialize( constructor = {} )
       super.update( 'json_class' => self.class.to_s )
-      self
     end
         
     # It will create a new database document if the Document hasn't been saved or it will update it if it has.
     # Will raise an error if the database or updating document does not exists or any other problem occurs.
-    def save!
-      doc = self.without_associations
-      response = id.nil? ? database.post( doc ) : database.put( doc )
-      self['_id'], self['_rev'] = response['id'], response['rev']
+    # Options:
+    #  Parse, atomic, validate
+    def save!( opts = {} )
+      default = { :atomic => true } # Possible source of conflict
+      clean   = self.remove_associations
+      
+      if clean == self
+        response = id.nil? ? database.post( self, opts ) : database.put( self, opts )
+        self.response_update response
+      else
+        docs     = @associated.flatten << clean
+        response = database.bulk_save docs, default.merge( opts )
+        docs.zip( response ){ |e| e.first.response_update e.last }
+      end
       response
     end
 
@@ -42,17 +51,38 @@ module CouchQuickie
     #   each_pair do |key, val| yield( key, val ) if val.kind_of? klass end
     # end
     
+    def reset!
+      delete('_rev')
+      self
+    end
+    
     protected
-    def without_associations
+    def response_update( response ) #TODO: Better name
+      self['_id'], self['_rev'] = response['id'], response['rev']
+    end
+    
+    def remove_associations
       copy = self.dup
-      associations.each { |joint| copy.delete joint[:name] }
+      @joints = []
+      @associated = associations.keys.map do |name|
+        assoc   = copy.delete name
+        # sarray  = Array.new( assoc.size, self )
+        #    ordered = self['json_class'] > assoc.first['json_class'] ? [ sarray, assoc ] : [ assoc, sarray ]
+        # 
+        #    ordered.first.zip( ordered.last ) do |e|
+        #      f, l = e.first, e.last
+        #      relationship = { '_id' => f.id + l.id, 'type' => 'relationship', f['json_class'] => f.id, l['json_class'] => l.id  }
+        #    end
+        assoc
+      end
       copy
     end
     
-    private
-    def set_ids_for_associations( association )
-    end
+    # def associated
+    #   associations.keys.collect{ |associated| self[associated]  }
+    # end
     
+    private
     def associations
       self.class.associations
     end
@@ -66,38 +96,34 @@ module CouchQuickie
       # Returns the design for the Document Class
       def design; @design; end
       
-      # Gets all the documents corresponding to a view
-      def get( key, opts = {} )
-        return database.get( key ) unless key.is_a? Symbol
-        
-        raise 'There is no view with that name' unless view = design.views[ key.to_s ]
-        response = Response.new database.get( "#{@design.id}/_view/#{key}", opts )
-        response = *response if view['reduce']
-        response
-      end
-      
       def associations; @associations; end #:nodoc:
+      
+      # Key can be a Symbol, String or Document Hash, if key is a Symbol it will get all the documents emited by a view
+      # of that name otherwise it will get the requested document by _id.
+      def get( key, opts = {} )
+        return database.get( key, opts ) unless key.is_a? Symbol
+        design.get key, opts
+      end
 
       private      
-      # def has_many( *associated )
-      #   opts  = associated.pop if associated.last.is_a? Hash
-      #   klass = opts.delete(:kind)
-      #   
-      #   for association in joins( associated, :belongs_to, klass )
-      #     name, key  = association[:name], association[:key]
-      #     define_method name do
-      #       self[name] = self[name] || self.class.get( self[key] )
-      #     end
-      #   end
-      # end
       
-      # def joins( associated, kind, klass ) #:nodoc:
-      #   @associations += associated.map! do |joint| 
-      #     klass = joint.to_s.classify 
-      #     { :name => joint.to_s, :kind => kind, :key => "#{klass}_id" }
-      #   end
-      #   associated
-      # end
+      def joins( *keys )
+        opts  = keys.pop if keys.last.is_a? Hash
+        
+        keys.each do |key| 
+          @associations[ key ] = { :kind => 'joint', :class => key.to_s.classify }
+          define_accessors key
+        end        
+      end
+      
+      def define_accessors( key )
+        define_method key do
+          self[key]
+        end
+        define_method "#{key}=" do |val|
+          self[key] = val
+        end
+      end
 
       protected
       # Sets the database for the Document Class and the associated <tt>Design</tt>

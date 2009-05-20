@@ -1,5 +1,4 @@
 class Response < Array
-  
   attr_reader :offset, :key
   
   def initialize( response )
@@ -12,4 +11,8 @@ class Response < Array
     sort{ |a,b| a[key] <=> b[key] }
   end
   
+  def self.parse( response )
+    return response if response.kind_of? String
+    new response
+  end
 end
