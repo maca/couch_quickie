@@ -3,8 +3,7 @@ class Response < Array
   
   def initialize( response )
     super response['rows'].collect{ |doc| doc['value'] }
-    @offset = response['offset']
-    @key    = response['key']
+    @offset, @key = response['offset'], response['key']
   end
   
   def sort_by( key )

@@ -4,14 +4,15 @@ require 'json/add/core'
 require 'json/add/rails'
 require 'rest_client'
 require 'active_support/inflector'
+require 'uuid'
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 require 'couch_quickie/response'
 require 'couch_quickie/database'
 require 'couch_quickie/string_hash'
 require 'couch_quickie/document'
-require 'couch_quickie/mixins/associations'
 require 'couch_quickie/design'
+require 'couch_quickie/relationship'
 require 'couch_quickie/object'
 
 
@@ -26,15 +27,10 @@ module CouchQuickie
       url
     end
 
-    # Addapted from Rack
     def build_query( params )
-      params.map do |k, v|
-        if v.kind_of? Array
-          build_query v.map{ |x| [k, x] }
-        else
-          v = escape( k.to_s == 'rev' ? v : %("#{v}") )
-          "#{k}=#{v}"
-        end
+      params.map do |key, val|
+        val = escape( val.to_json ) unless key.to_sym == :rev
+        "#{key}=#{val}"
       end.join("&")
     end
 

@@ -45,11 +45,11 @@ module CouchQuickie
     #   Additional query parameters
     #   eg. { :query => {:rev => 'aue763h7hiu'} }
     def get( doc, opts = {} )
-      http_action :get, doc, opts
+      http_action :get, doc, opts #TODO, not accept nil
     end
     
     # Deletes an existing CouchDB document, <tt>doc</tt> can kind of <tt>Hash</tt> or a subclass of <tt>Document</tt> as long as it has
-    # <tt>_id</id> and <tt>_rev</tt> attributes corresponding to a stored document.
+    # <tt>_id</id> and <tt>_rev</tt> attributes corresponding to a stored document or a Sting id.
     #
     # Options:
     #   * parse: +false+

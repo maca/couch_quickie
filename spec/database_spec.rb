@@ -33,23 +33,23 @@ describe Database do
   end
   
   shared_examples_for 'document' do
-    it "should post a document" do
-      response = @db.post @doc
+    it "should create a document" do
+      response = @doc['_id'] ? @db.put( @doc ) : @db.post( @doc )
       doc = get( "#{@url}/#{response['id']}" )
-      doc.delete( '_id').should_not be_nil
+      doc.delete( '_id').should_not be_nil unless @doc['_id'] =~ /design/
       doc.delete('_rev').should_not be_nil
-      doc == @doc
+      doc.should == @doc
     end
   
     it "should get a document" do
-      response = @db.post @doc
+      response = @doc['_id'] ? @db.put( @doc ) : @db.post( @doc )
       doc = @db.get( response['id'] )
-      doc.delete( '_id').should_not be_nil
+      doc.delete( '_id').should_not be_nil unless @doc['_id'] =~ /design/
       doc.delete('_rev').should_not be_nil
-      doc == @doc
+      doc.should == @doc
     end
   
-    it "should get a raw document" do
+    it "should get a raw response" do
       response = @db.post @doc
       @db.get( response['id'], :parse => false ).should be_kind_of( String )
     end
