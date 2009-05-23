@@ -1,7 +1,10 @@
 require File.dirname(__FILE__) + '/spec_helper.rb'
-require File.join(FIXTURES, 'calendar')
-require File.join(FIXTURES, 'obj')
+# require File.join(FIXTURES, 'obj')
 
+class Calendar < CouchQuickie::Document
+  
+  
+end
 
 include CouchQuickie
 
@@ -100,6 +103,9 @@ describe Document do
         
         after do
           Calendar.database.reset!
+        end
+        
+        it "should use accessors if available" do
         end
         
         it "should get database for instance" do

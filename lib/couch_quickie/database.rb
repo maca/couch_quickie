@@ -103,7 +103,7 @@ module CouchQuickie
     #   JSON consumers, otherwise it will return a Ruby Hash.
     #   * query: +Hash+
     #   Additional query parameters
-    #   eg. { :query => {:key => 'Person'} }
+    #   eg. { :query => {:key => 'Person', :group => true} }
     def view( design, view, opts = {})
       http_action :get, "#{design}/_view/#{view}", opts
     end

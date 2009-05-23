@@ -27,6 +27,7 @@ module CouchQuickie
       url
     end
 
+    # Addapted from Rack
     def build_query( params )
       params.map do |key, val|
         val = escape( val.to_json ) unless key.to_sym == :rev
