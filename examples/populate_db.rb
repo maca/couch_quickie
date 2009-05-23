@@ -1,4 +1,5 @@
 require '../lib/couch_quickie'
+require 'benchmark'
 
 
 include CouchQuickie
@@ -34,24 +35,32 @@ design = Group.design
 michel = persons.first
 ary    = persons[1]
 michel.save!
-ary.save!
 
-design.push_view :test => {
-  :map => "function(doc) {
-     if (doc.json_class == 'CouchQuickie::Relationship') {
-        emit( [doc.A], doc.B ) 
-     } else if (doc.json_class == 'Group'){
-       emit( [{},{}], doc )
-     }
-  }",
-  
-  # :reduce => "function( keys, values ){
-  #   return values;
-  # }"
-}
-design.save!
 
-response = db.view design.id, :test, :query => {:startkey => ['Ary'], :endkey => [{}, {}]} # , :query => {:group => true}
 
-puts response.to_yaml
+# puts Benchmark.measure { 
+#   ary.send :pre
+# }
+
+
+
+
+# design.push_view :test => {
+#   :map => "function(doc) {
+#      if (doc.json_class == 'CouchQuickie::Relationship') {
+#         emit( [doc.A], doc.B ) 
+#      } else if (doc.json_class == 'Group'){
+#        emit( [{},{}], doc )
+#      }
+#   }",
+#   
+#   # :reduce => "function( keys, values ){
+#   #   return values;
+#   # }"
+# }
+# design.save!
+# 
+# response = db.view design.id, :test, :query => {:startkey => ['Ary'], :endkey => [{}, {}]} # , :query => {:group => true}
+# 
+# puts response.to_yaml
 

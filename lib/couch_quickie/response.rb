@@ -6,7 +6,7 @@ class Response < Array
     @offset, @key = response['offset'], response['key']
   end
 
-  def self.parse( response )
+  def self.wrap( response )
     return response if response.kind_of? String
     new response
   end

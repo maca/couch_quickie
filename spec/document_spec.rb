@@ -2,8 +2,9 @@ require File.dirname(__FILE__) + '/spec_helper.rb'
 # require File.join(FIXTURES, 'obj')
 
 class Calendar < CouchQuickie::Document
-  
-  
+  def monday=( whatever )
+    self['monday'] = 'you can fall apart'
+  end
 end
 
 include CouchQuickie
@@ -69,6 +70,10 @@ describe Document do
       jsondoc[:friday] = @friday['friday']
       jsondoc.should == @calendar.merge(@friday)
     end
+    
+    it "should use accessors if available" do
+      Calendar.new( @calendar.merge('monday' => "I'm in love") ).should == @calendar.merge('monday' => 'you can fall apart')
+    end
   end
   
   describe 'Database creation and interaction' do
@@ -104,10 +109,7 @@ describe Document do
         after do
           Calendar.database.reset!
         end
-        
-        it "should use accessors if available" do
-        end
-        
+   
         it "should get database for instance" do
           @calendar.database.info['db_name'].should == 'calendars'
         end

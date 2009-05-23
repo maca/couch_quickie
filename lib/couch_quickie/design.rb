@@ -27,7 +27,7 @@ module CouchQuickie
     
     def get( key, opts = {} )
       raise 'There is no view with that name' unless view = views[ key.to_s ]
-      response = Response.parse database.view( id, key, opts )
+      response = Response.wrap database.view( id, key, opts )
       response = *response if view['reduce']
       response
     end

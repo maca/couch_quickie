@@ -4,31 +4,32 @@ module CouchQuickie
     attr_accessor :database
     
     # Expects an attributes hash
-    def initialize( constructor = {} )
+    def initialize( hash = {} )
+      hash = hash.dup
+      associations.keys.each { |a| hash[a] ||= []  }
+      for key, val in hash
+        writer = "#{key}="
+        if self.respond_to? writer
+          self.send writer, hash.delete( key ) 
+        end
+      end
       super.update( 'json_class' => self.class.to_s )
     end
-        
+            
     # It will create a new database document if the Document hasn't been saved or it will update it if it has.
     # Will raise an error if the database or updating document does not exists or any other problem occurs.
     # Options:
     #  Atomic, validate
     def save!( opts = {} )
       opts.delete :parse
-      clean = self.remove_associations
-
-      if clean == self
-        response = id.nil? ? database.post( self, opts ) : database.put( self, opts )
-        self.update_with response
-      else
-        docs     = [clean] + @associated.flatten + @relationships + @deleted_relationships #TODO: Reject not changed
-        response = database.bulk_save docs, { :atomic => true }.merge( opts )
-        docs[0]  = self #replace copy with self for updating _id and _rev
-        docs.zip( response ) do |pair|
-          doc, response = pair 
-          doc.update_with response if doc.kind_of? Document #updating id and rev for associated and relationships
-        end 
-      end
       
+      docs     = self.prepare_associations
+      response = database.bulk_save docs, { :atomic => true }.merge( opts )
+      docs[0]  = self
+      docs.zip( response ) do |pair|
+        doc, response = pair 
+        doc.update_with response if doc.kind_of? Document 
+      end 
       response
     end
 
@@ -60,6 +61,14 @@ module CouchQuickie
       self
     end
     
+    def to_hash( associations = true)
+      Hash.new.merge( associations ? self : self.without_associations )
+    end
+    
+    def to_json
+      self.to_hash( false ).to_json
+    end
+    
     protected
     # Updates _id and _rev attributes from the response of a POST or PUT request
     def update_with( response ) #TODO: Better name
@@ -67,37 +76,44 @@ module CouchQuickie
     end
     
     # Makes a copy of the document without associated documents, collects associated documents and creates Relationships in between
-    def remove_associations
-      return self if associations.empty?
+    def prepare_associations( associated = [], relationships = [], deleted_relationships = [] )
+      return [self] if associations.empty?
       self.assign_uuid #if it doesn't have one
-      
-      copy, @relationships, @deleted_relationships = self.dup, [], []
+      copy = self.dup
+
       existing_relationships = self.class.get( :relationships, :query => { :key => id } )
       
-      @associated = associations.keys.map do |name|
+      for name, key in associations
         next unless self[name].kind_of? Array # Nothing to do
-        klass_name = name.to_s.classify
-        existing   = existing_relationships.select{ |rel| rel['A']['joint'] == klass_name or rel['B']['joint'] == klass_name } # just for the current associated class
-        assoc      = copy.delete name
-                
+        
+        foreign_key = key || name.to_s.classify
+        existing = existing_relationships.select{ |rel| rel['A']['key'] == foreign_key or rel['B']['key'] == foreign_key } # just for the current associated class
+        assoc    = copy.delete name
+        
         assoc.zip( Array.new( assoc.size, self ) ) do |pair|
           other, this = pair #create a relationship document, assign uuid to related document unless it allready has one in order to establish the connection
           saved = existing.find{ |r| r['A']['_id'] == this.id && r['B']['_id'] == other.id or r['A']['_id'] == other.id && r['B']['_id'] == this.id } # finds a relationships between two docs if it exists
-
+                    
           unless existing.delete( saved )
-            @relationships << Relationship.new( 
-            'A' => { '_id' => this.id, 'joint' => this['json_class'] }, 
-            'B' => { '_id' => other.assign_uuid, 'joint' => other['json_class'] } 
+            relationships << Relationship.new( 
+            'A' => { '_id' => this.id, 'key' => this['json_class'] }, 
+            'B' => { '_id' => other.assign_uuid, 'key' => other['json_class'] } 
             )
           end
         end
-
-        @deleted_relationships += existing.map{ |rel| { '_id' => rel.id, '_rev' => rel.rev, '_delete' => true } }
-        assoc
-      end.compact
-      copy
+        deleted_relationships += existing.map{ |rel| { '_id' => rel.id, '_rev' => rel.rev, '_delete' => true } }
+        
+        associated << assoc
+      end
+      [copy] + associated.flatten.compact + relationships + deleted_relationships
     end
     
+    def without_associations
+      copy = self.dup
+      associations.keys.each{ |name| copy.delete name }
+      copy
+    end
+ 
     # Assigns a uuid unless document allready has one
     def assign_uuid
       self['_id'] ||= "r-" + @@uuid.generate
@@ -134,20 +150,25 @@ module CouchQuickie
           define_accessors key
         end
         design.push_view :related_ids => {
-          'map' => "function(doc) { if (doc.json_class == 'CouchQuickie::Relationship'){ emit( [doc.A._id, doc.B.joint], doc.B._id ); emit( [doc.B._id, doc.A.joint], doc.A._id ) } }"
+          'map' => "function(doc) { if (doc.json_class == 'CouchQuickie::Relationship'){ emit( [doc.A._id, doc.B.key], doc.B._id ); emit( [doc.B._id, doc.A.key], doc.A._id ) } }"
         }
         design.push_view :relationships => {
           'map' => "function(doc) { if (doc.json_class == 'CouchQuickie::Relationship'){ emit( doc.A._id, doc ); emit( doc.B._id, doc ) } }"
         }
       end
       
-      def define_accessors( key )
-        define_method key do
-          self[key]
+      
+      def define_accessors( joint )
+        define_method joint do
+          self[joint]
         end
-        define_method "#{key}=" do |val|
-          p self.to_s
-          self[key] = val
+        define_method "#{joint}=" do |val|
+          key = self.class.to_s.pluralize.downcase
+          val.each do |associated|
+            associated[ key ] << self
+            associated[ key ].uniq!
+          end
+          self[joint] = val
         end
       end
 

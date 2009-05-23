@@ -1,4 +1,5 @@
 require File.dirname(__FILE__) + '/spec_helper.rb'
+require 'benchmark'
 
 include CouchQuickie
 Database.new('http://127.0.0.1:5984/many_to_many_spec').delete! rescue nil
@@ -27,6 +28,7 @@ describe 'many to many' do
     Person.design.reset!.save!
     Group.design.reset!.save!
     @db = Person.database
+    Person.get( :related_ids )
   end
   
   describe Person do
@@ -34,6 +36,7 @@ describe 'many to many' do
       before do
         @michel = @persons.first
         @ary    = @persons[1]
+        @txema  = @persons[2]
         @phones = 5.times{ |i| Phone.new( '_id' => i ) }
         @db     = Person.database
       end
@@ -45,8 +48,15 @@ describe 'many to many' do
     
       it "should not save groups in Person document" do
         @michel.save!
-        Person.get( @michel )['groups'].should be_nil
+        Person.get( @michel )['groups'].should == []
         @michel['groups'].should == [@friends]
+      end
+      
+      it "should append group in Person document" do
+        @michel.save!
+        michel = Person.get( @michel )
+        michel.groups << @friends
+        michel.groups.should == [@friends]
       end
       
       it "should not blow if groups is nil" do
@@ -54,24 +64,25 @@ describe 'many to many' do
         @ary.save!
       end
     
-      it "should save associated groups" do
+      it "should save associated groups without people" do
         @ary.save!
         @ary.should_not be_new_document
-        @ary.groups.map{ |group| @db.get( group ) }.should == [ @collegues, @family, @friends ]
+        groups = [ @collegues, @family, @friends ].map{ |g| g.people = []; g }
+        @ary.groups.map{ |group| @db.get( group ) }.should == groups
       end
       
       it "should save relationships" do
         @ary.save!
-        response = Response.new @db.temp_view( :map => "function(doc){ if(doc.json_class == 'CouchQuickie::Relationship'){ emit(null, doc) } }")
-        response.sort_by{ |e| e['B']['_id'] }.should == @ary.instance_variable_get( :@relationships ).sort_by{ |e| e['B']['_id']  }
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == 
+        [ @collegues, @family, @friends ].map{ |g| g.id }.sort
       end
       
       it "should save relationships for two documents" do
         @ary.save!
         @michel.save!
-        response = Response.new @db.temp_view( :map => "function(doc){ if(doc.json_class == 'CouchQuickie::Relationship'){ emit(null, doc) } }")
-        relationships = @ary.instance_variable_get( :@relationships ) + @michel.instance_variable_get( :@relationships )
-        response.sort_by{ |e| e.to_s }.should == relationships.sort_by{ |e| e.to_s  }
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == 
+        [ @collegues, @family, @friends ].map{ |g| g.id }.sort
+        Person.get( :related_ids, :query => { :key => [@michel.id, 'Group'] } ).sort.should == [ @friends ].map{ |g| g.id }.sort
       end
       
       it "should get related group ids" do
@@ -88,9 +99,9 @@ describe 'many to many' do
         Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == @michel.groups.map{ |g| g.id  }
       end
       
-      it "should add person to each group people array" do
-        @friends.people.sort_by{ |p| p.id }.should == [@michel, @ary, @txema].sort_by{ |p| p.id }
-      end
+      it "should add person related group" # do
+       #        @friends.people.sort_by{ |p| p['name'] }.should == [@michel, @ary, @txema].sort_by{ |p| p['name'] }
+       #      end
     end
     
     describe 'with no id' do
