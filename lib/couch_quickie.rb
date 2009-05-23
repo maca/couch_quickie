@@ -7,13 +7,13 @@ require 'active_support/inflector'
 require 'uuid'
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+require 'couch_quickie/core_ext'
 require 'couch_quickie/response'
 require 'couch_quickie/database'
 require 'couch_quickie/string_hash'
 require 'couch_quickie/document'
 require 'couch_quickie/design'
 require 'couch_quickie/relationship'
-require 'couch_quickie/object'
 
 
 module CouchQuickie

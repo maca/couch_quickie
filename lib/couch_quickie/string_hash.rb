@@ -21,12 +21,3 @@ module CouchQuickie
   end
 end
 
-class Hash
-  #from Rails
-  def strigify_keys
-    inject({}) do |options, (key, value)|
-      options[key.to_s] = value
-      options
-    end
-  end
-end

@@ -89,7 +89,7 @@ describe 'many to many' do
         @ary.save!
         @michel.save!
         Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == @ary.groups.map { |g| g.id  }
-        Person.get( :related_ids, :query => { :key => [@michel.id, 'Group'] } ).should == @michel.groups.map { |g| g.id  }
+        Person.get( :related_ids, :query => { :key => [@michel.id, 'Group'] } ).should   == @michel.groups.map { |g| g.id  }
       end
       
       it "should restablish relationships" do
@@ -104,21 +104,7 @@ describe 'many to many' do
        #      end
     end
     
-    describe 'with no id' do
-      before do
-        @collegues = Group.new 'name' => 'Collegues'
-        @family    = Group.new 'name' => 'Family'
-        @friends   = Group.new 'name' => 'Friends'
 
-        @persons   = [
-          Person.new( 'name' => 'Michel', 'groups' => [ @friends ] ),
-          Person.new( 'name' => 'Ary',    'groups' => [ @collegues, @family, @friends ] ),
-          Person.new( 'name' => 'Txema',  'groups' => [ @collegues, @friends ] ),
-          Person.new( 'name' => 'Mom',    'groups' => [ @family ] )
-        ]
-      end
-      it_should_behave_like 'relational'
-    end
     
     describe 'with given id' do
       before do
@@ -131,6 +117,22 @@ describe 'many to many' do
           Person.new( '_id' => 'Ary',    'groups' => [ @collegues, @family, @friends ] ),
           Person.new( '_id' => 'Txema',  'groups' => [ @collegues, @friends ] ),
           Person.new( '_id' => 'Mom',    'groups' => [ @family ] )
+        ]
+      end
+      it_should_behave_like 'relational'
+    end
+    
+    describe 'with no id' do
+      before do
+        @collegues = Group.new 'name' => 'Collegues'
+        @family    = Group.new 'name' => 'Family'
+        @friends   = Group.new 'name' => 'Friends'
+
+        @persons   = [
+          Person.new( 'name' => 'Michel', 'groups' => [ @friends ] ),
+          Person.new( 'name' => 'Ary',    'groups' => [ @collegues, @family, @friends ] ),
+          Person.new( 'name' => 'Txema',  'groups' => [ @collegues, @friends ] ),
+          Person.new( 'name' => 'Mom',    'groups' => [ @family ] )
         ]
       end
       it_should_behave_like 'relational'

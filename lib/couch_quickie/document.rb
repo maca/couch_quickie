@@ -6,7 +6,10 @@ module CouchQuickie
     # Expects an attributes hash
     def initialize( hash = {} )
       hash = hash.dup
+      
       associations.keys.each { |a| hash[a] ||= []  }
+      self['_associations'] = associations.keys
+      
       for key, val in hash
         writer = "#{key}="
         if self.respond_to? writer
@@ -69,6 +72,10 @@ module CouchQuickie
       self.to_hash( false ).to_json
     end
     
+    def to_delete
+      { '_id' => id, '_rev' => rev, '_deleted' => true }
+    end
+    
     protected
     # Updates _id and _rev attributes from the response of a POST or PUT request
     def update_with( response ) #TODO: Better name
@@ -101,7 +108,7 @@ module CouchQuickie
             )
           end
         end
-        deleted_relationships += existing.map{ |rel| { '_id' => rel.id, '_rev' => rel.rev, '_delete' => true } }
+        deleted_relationships += existing.map(&:to_delete)
         
         associated << assoc
       end
@@ -116,7 +123,7 @@ module CouchQuickie
  
     # Assigns a uuid unless document allready has one
     def assign_uuid
-      self['_id'] ||= "r-" + @@uuid.generate
+      self['_id'] ||= @@uuid.generate
     end
     
     private
@@ -146,7 +153,7 @@ module CouchQuickie
       private      
       def joins( *keys )
         keys.each do |key| 
-          @associations[ key ] = nil
+          @associations[ key.to_s ] = nil
           define_accessors key
         end
         design.push_view :related_ids => {
@@ -155,13 +162,24 @@ module CouchQuickie
         design.push_view :relationships => {
           'map' => "function(doc) { if (doc.json_class == 'CouchQuickie::Relationship'){ emit( doc.A._id, doc ); emit( doc.B._id, doc ) } }"
         }
+        # design.push_view :related ={
+        #           'map' => "function(doc) {
+        #             if (doc.json_class == 'CouchQuickie::Relationship' ){
+        #               
+        #             } else if (doc.json_) {
+        #               
+        #             }
+        #           }"
+        #           
+        #         }
+        
       end
-      
       
       def define_accessors( joint )
         define_method joint do
           self[joint]
         end
+        
         define_method "#{joint}=" do |val|
           key = self.class.to_s.pluralize.downcase
           val.each do |associated|
