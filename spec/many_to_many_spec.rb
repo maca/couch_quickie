@@ -1,3 +1,4 @@
+
 require File.dirname(__FILE__) + '/spec_helper.rb'
 require 'benchmark'
 
@@ -28,7 +29,7 @@ describe 'many to many' do
     Person.design.reset!.save!
     Group.design.reset!.save!
     @db = Person.database
-    Person.get( :related_ids )
+    Person.get( :related_ids ) # Specs are slow cuz the view is regenerating on each spec
   end
   
   describe Person do
@@ -73,35 +74,35 @@ describe 'many to many' do
       
       it "should save relationships" do
         @ary.save!
-        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == 
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'groups'] } ).sort.should == 
         [ @collegues, @family, @friends ].map{ |g| g.id }.sort
       end
       
       it "should save relationships for two documents" do
         @ary.save!
         @michel.save!
-        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == 
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'groups'] } ).sort.should == 
         [ @collegues, @family, @friends ].map{ |g| g.id }.sort
-        Person.get( :related_ids, :query => { :key => [@michel.id, 'Group'] } ).sort.should == [ @friends ].map{ |g| g.id }.sort
+        Person.get( :related_ids, :query => { :key => [@michel.id, 'groups'] } ).sort.should == [ @friends ].map{ |g| g.id }.sort
       end
       
       it "should get related group ids" do
         @ary.save!
         @michel.save!
-        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == @ary.groups.map { |g| g.id  }
-        Person.get( :related_ids, :query => { :key => [@michel.id, 'Group'] } ).should   == @michel.groups.map { |g| g.id  }
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'groups'] } ).sort.should == @ary.groups.map { |g| g.id  }
+        Person.get( :related_ids, :query => { :key => [@michel.id, 'groups'] } ).should   == @michel.groups.map { |g| g.id  }
       end
       
       it "should restablish relationships" do
         @ary.save!
         @ary.groups = @michel.groups
         @ary.save!
-        Person.get( :related_ids, :query => { :key => [@ary.id, 'Group'] } ).sort.should == @michel.groups.map{ |g| g.id  }
+        Person.get( :related_ids, :query => { :key => [@ary.id, 'groups'] } ).sort.should == @michel.groups.map{ |g| g.id  }
       end
       
       it "should add person related group" # do
-       #        @friends.people.sort_by{ |p| p['name'] }.should == [@michel, @ary, @txema].sort_by{ |p| p['name'] }
-       #      end
+       #                    @friends.people.sort_by{ |p| p['name'] }.should == [@michel, @ary, @txema].sort_by{ |p| p['name'] }
+       #                  end
     end
     
 
@@ -122,21 +123,21 @@ describe 'many to many' do
       it_should_behave_like 'relational'
     end
     
-    describe 'with no id' do
-      before do
-        @collegues = Group.new 'name' => 'Collegues'
-        @family    = Group.new 'name' => 'Family'
-        @friends   = Group.new 'name' => 'Friends'
-
-        @persons   = [
-          Person.new( 'name' => 'Michel', 'groups' => [ @friends ] ),
-          Person.new( 'name' => 'Ary',    'groups' => [ @collegues, @family, @friends ] ),
-          Person.new( 'name' => 'Txema',  'groups' => [ @collegues, @friends ] ),
-          Person.new( 'name' => 'Mom',    'groups' => [ @family ] )
-        ]
-      end
-      it_should_behave_like 'relational'
-    end
+    # describe 'with no id' do
+    #   before do
+    #     @collegues = Group.new 'name' => 'Collegues'
+    #     @family    = Group.new 'name' => 'Family'
+    #     @friends   = Group.new 'name' => 'Friends'
+    # 
+    #     @persons   = [
+    #       Person.new( 'name' => 'Michel', 'groups' => [ @friends ] ),
+    #       Person.new( 'name' => 'Ary',    'groups' => [ @collegues, @family, @friends ] ),
+    #       Person.new( 'name' => 'Txema',  'groups' => [ @collegues, @friends ] ),
+    #       Person.new( 'name' => 'Mom',    'groups' => [ @family ] )
+    #     ]
+    #   end
+    #   it_should_behave_like 'relational'
+    # end
   end
   
   # http://127.0.0.1:5984/many_to_many_spec/_design/relationships/_view/by_person_ids?startkey=[%22Ary%22]&endkey=[%22Ary%22,{}]

@@ -7,15 +7,11 @@ module CouchQuickie
     def initialize( hash = {} )
       hash = hash.dup
       
-      associations.keys.each { |a| hash[a] ||= []  }
+      associations.keys.each { |a| self[a] ||= []  }
+
       self['_associations'] = associations.keys
+      assign_with_accessors hash
       
-      for key, val in hash
-        writer = "#{key}="
-        if self.respond_to? writer
-          self.send writer, hash.delete( key ) 
-        end
-      end
       super.update( 'json_class' => self.class.to_s )
     end
             
@@ -29,7 +25,7 @@ module CouchQuickie
       docs     = self.prepare_associations
       response = database.bulk_save docs, { :atomic => true }.merge( opts )
       docs[0]  = self
-      docs.zip( response ) do |pair|
+      docs.zip response do |pair|
         doc, response = pair 
         doc.update_with response if doc.kind_of? Document 
       end 
@@ -40,7 +36,7 @@ module CouchQuickie
     # Will raise an error if the database or the document does not exists or any other problem occurs.
     def delete!
       response = database.delete self
-      self.delete('_rev')
+      self.delete '_rev'
       response
     end
     
@@ -64,12 +60,12 @@ module CouchQuickie
       self
     end
     
-    def to_hash( associations = true)
-      Hash.new.merge( associations ? self : self.without_associations )
+    def to_hash
+      Hash.new.merge self.without_associations
     end
     
     def to_json
-      self.to_hash( false ).to_json
+      self.to_hash.to_json
     end
     
     def to_delete
@@ -93,26 +89,24 @@ module CouchQuickie
       for name, key in associations
         next unless self[name].kind_of? Array # Nothing to do
         
-        foreign_key = key || name.to_s.classify
-        existing = existing_relationships.select{ |rel| rel['A']['key'] == foreign_key or rel['B']['key'] == foreign_key } # just for the current associated class
-        assoc    = copy.delete name
+        foreign_key = key || name
+        existing    = existing_relationships.select{ |rel| rel['A']['key'] == foreign_key or rel['B']['key'] == foreign_key } # just for the current associated class
+        assoc       = copy.delete name
         
-        assoc.zip( Array.new( assoc.size, self ) ) do |pair|
-          other, this = pair #create a relationship document, assign uuid to related document unless it allready has one in order to establish the connection
-          saved = existing.find{ |r| r['A']['_id'] == this.id && r['B']['_id'] == other.id or r['A']['_id'] == other.id && r['B']['_id'] == this.id } # finds a relationships between two docs if it exists
+        assoc.each do |other|
+          saved = existing.find{ |r| r['A']['_id'] == id && r['B']['_id'] == other.id or r['A']['_id'] == other.id && r['B']['_id'] == id } # finds a relationships between two docs if it exists
                     
           unless existing.delete( saved )
             relationships << Relationship.new( 
-            'A' => { '_id' => this.id, 'key' => this['json_class'] }, 
-            'B' => { '_id' => other.assign_uuid, 'key' => other['json_class'] } 
+            'A' => { '_id' => id, 'key' => key || self['json_class'].pluralize.downcase }, 
+            'B' => { '_id' => other.assign_uuid, 'key' => key || other['json_class'].pluralize.downcase } 
             )
           end
         end
         deleted_relationships += existing.map(&:to_delete)
-        
         associated << assoc
       end
-      [copy] + associated.flatten.compact + relationships + deleted_relationships
+      [copy] + associated.flatten + relationships + deleted_relationships
     end
     
     def without_associations
@@ -124,6 +118,15 @@ module CouchQuickie
     # Assigns a uuid unless document allready has one
     def assign_uuid
       self['_id'] ||= @@uuid.generate
+    end
+    
+    def assign_with_accessors( hash )
+      for key, val in hash
+        writer = "#{key}="
+        if self.respond_to? writer
+          self.send writer, hash.delete( key ) 
+        end
+      end
     end
     
     private
@@ -155,6 +158,9 @@ module CouchQuickie
         keys.each do |key| 
           @associations[ key.to_s ] = nil
           define_accessors key
+          p key
+          
+          
         end
         design.push_view :related_ids => {
           'map' => "function(doc) { if (doc.json_class == 'CouchQuickie::Relationship'){ emit( [doc.A._id, doc.B.key], doc.B._id ); emit( [doc.B._id, doc.A.key], doc.A._id ) } }"
@@ -183,6 +189,7 @@ module CouchQuickie
         define_method "#{joint}=" do |val|
           key = self.class.to_s.pluralize.downcase
           val.each do |associated|
+            associated[ key ] ||= []
             associated[ key ] << self
             associated[ key ].uniq!
           end
