@@ -3,8 +3,9 @@ require File.dirname(__FILE__) + '/spec_helper.rb'
 class Book < CouchQuickie::Document; end
 
 include CouchQuickie  
+include Document
 
-describe Design, 'for document class' do
+describe Document::Design, 'for document class' do
   before do
     @book_design = JSON.parse( BOOK_VIEW )
     @book_view = @book_design['views']['all']
@@ -52,17 +53,29 @@ describe Design, 'for document class' do
     @design.views['all'].should == {'map' => "function(doc) { if(doc.json_class == 'Book'){ emit(doc._id, doc); } }"}
   end
   
+  it "should set a default id" do
+    @design['_id'].should == '_design/book'
+  end
+  
   it "should have a database" do
     @design.database = 'http://localhost:5984/books'
     @design.database.to_s.should == 'http://localhost:5984/books'
     @design.database.should be_instance_of( Database )
   end
-  
-  it "should set a default id" do
-    @design['_id'].should == '_design/book'
-  end
-  
+    
   it "should recreate design when reseting the database????"
+  
+  describe 'database interaction' do
+    before do
+      @design.database = 'http://localhost:5984/books'
+    end
+  
+    it "should keep track of view changes" do
+      @design.save!
+      @design.push_view @book_view
+      @design.should be_changed
+    end
+  end
   
   describe 'database interaction' do
     before do

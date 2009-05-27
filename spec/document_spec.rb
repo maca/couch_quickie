@@ -1,7 +1,12 @@
 require File.dirname(__FILE__) + '/spec_helper.rb'
 # require File.join(FIXTURES, 'obj')
 
+Database.new('http://127.0.0.1:5984/doc_spec').delete! rescue nil
+
+
 class Calendar < CouchQuickie::Document
+  set_database 'http://127.0.0.1:5984/doc_spec'
+  
   def monday=( whatever )
     self['monday'] = 'you can fall apart'
   end
@@ -13,7 +18,7 @@ describe Document do
   
   describe 'JSON parsing' do
     before do
-      @hash_calendar = { "json_class" => "Calendar", "yesterday" => Date.civil(2009, 5, 10), "today" => Date.civil(2009, 5, 11), "tomorrow" => Date.civil(2009, 5, 12), "some-blue-day" => nil }
+      @hash_calendar = { "json_class" => "Calendar", "yesterday" => Date.civil(2009, 5, 10), "today" => Date.civil(2009, 5, 11), "tomorrow" => Date.civil(2009, 5, 12), "some-blue-day" => nil, "_joint_name"=>"calendars" }
     end
     
     shared_examples_for 'parsed document' do
@@ -30,6 +35,7 @@ describe Document do
     describe 'parse from json' do
       before do
         @calendar = JSON.parse( JSON_CALENDAR )
+        @calendar.delete('_id').should_not be_nil
       end
       it_should_behave_like 'parsed document'
     end
@@ -37,6 +43,7 @@ describe Document do
     describe 'serialization persistence' do
       before do
         @calendar = JSON.parse( JSON.parse( JSON_CALENDAR ).to_json )
+        @calendar.delete('_id').should_not be_nil
       end
       it_should_behave_like 'parsed document'
     end
@@ -44,18 +51,21 @@ describe Document do
   
   describe 'hash behaviour' do
     before do
-      @calendar = { "json_class" => "Calendar", "yesterday" => Date.civil(2009, 5, 10), "today" => Date.civil(2009, 5, 11), "tomorrow" => Date.civil(2009, 5, 12), "some-blue-day" => nil }
+      @calendar = { "json_class" => "Calendar", "yesterday" => Date.civil(2009, 5, 10), "today" => Date.civil(2009, 5, 11), "tomorrow" => Date.civil(2009, 5, 12), "some-blue-day" => nil, "_joint_name"=>"calendars" }
       @friday   = { 'friday' => 'I am in love' }
+      @doc = Calendar.new( @calendar )
     end
 
     it "should should return instance on Document on #merge" do
       merge = Calendar.new( @calendar ).merge( @friday )
+      merge.delete('_id').should_not be_nil
       merge.should == @calendar.merge( @friday )
       merge.should be_instance_of( Calendar )
     end
 
     it "should should return instance on Document on #merge!" do
       merge = Calendar.new( @calendar ).merge!( @friday )
+      merge.delete('_id').should_not be_nil
       merge.should == @calendar.merge( @friday )
       merge.should be_instance_of( Calendar )
     end
@@ -66,13 +76,43 @@ describe Document do
 
     it "should have indiferent access" do
       jsondoc = Calendar.new( @calendar )
+      jsondoc.delete('_id').should_not be_nil
       jsondoc[:today].should == @calendar['today']
       jsondoc[:friday] = @friday['friday']
       jsondoc.should == @calendar.merge(@friday)
     end
     
     it "should use accessors if available" do
-      Calendar.new( @calendar.merge('monday' => "I'm in love") ).should == @calendar.merge('monday' => 'you can fall apart')
+      cal = Calendar.new( @calendar.merge('monday' => "I'm in love") )
+      cal.delete('_id').should_not be_nil
+      cal.should == @calendar.merge('monday' => 'you can fall apart')
+    end
+    
+    it "should track changes" do
+      @doc.changes.should == {}
+      @doc.merge!( 'monday' => 'you can fall apart' )
+      @doc.changes.should == { 'monday' => 'you can fall apart' }
+    end
+    
+    it "should be changed" do
+      @doc.should_not be_changed
+      @doc.merge!( 'monday' => 'you can fall apart' )
+      @doc.should be_changed
+    end
+    
+    it "should reset pristine copy when saving" do
+      @doc.should_not be_changed
+      @doc.merge!( 'monday' => 'you can fall apart' )
+      @doc.save!
+      @doc.should_not be_changed
+    end
+    
+    it "should reset pristine copy when deleting" do
+      @doc.save!
+      @doc.should_not be_changed
+      @doc.merge!( 'monday' => 'you can fall apart' )
+      @doc.delete!
+      @doc.should_not be_changed
     end
   end
   

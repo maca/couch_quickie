@@ -2,7 +2,7 @@ module CouchQuickie
   # Ruby interaction with a CouchDB database, saves documents, updates, etc...
   class Database
     attr_accessor :url
-    attr_reader   :name
+    attr_reader   :name, :design
     
     # Expects the url of the CouchDB to use:
     #   Database.new('http://127.0.0.1:5984/books')
@@ -10,7 +10,11 @@ module CouchQuickie
     # It will create the database if it doesn't allready exist.
     def initialize( url )
       @url, @name = url, url.match( /[^\/]*$/ ).to_s
-      http_action :put, nil, :doc => '' rescue nil
+      begin
+        http_action :put, nil, :doc => ''
+        create_shared_design
+      rescue
+      end
     end
     
     # Creates a new CouchDB document, <tt>doc</tt> must be kind of <tt>Hash</tt> or a subclass of <tt>Document</tt>
@@ -83,6 +87,7 @@ module CouchQuickie
     def reset!( opts = {} )
       http_action :delete, nil rescue nil
       http_action :put, nil, opts.merge( :doc => '' )
+      create_shared_design
     end
     
     # Information on the CouchDB database: name, disk size, number of documents, etc...
@@ -160,11 +165,32 @@ module CouchQuickie
         response = RestClient.send *args
       rescue RestClient::ExceptionWithResponse => e
         response = e.response.to_ary[1] 
-        raise CouchQuickie::CouchDBError.new( response ) # what couchdb has to say?
+        raise CouchQuickie::CouchDBError.new( "#{args[1]}: #{response}" ) # what couchdb has to say?
       end
       
       parse ? JSON.parse( response ) : response
     end
+    
+    def create_shared_design
+      @design = Design.new( '_id' => '_design/shared', :database => self )
+      @design.push_view :associated => {
+        :map => "function(doc) {
+          if ( doc._associations ) {
+            for (var i in doc._associations) {
+              var association = doc._associations[ i ];
+              associated = doc[ '_' + association ];
+              for (var j in associated ) {
+                var emited = {};
+                emited[ doc._joint_name ] = [doc];
+                emit( [associated[j], doc._joint_name], emited );
+              }
+            }
+          }
+        }"
+      }
+      @design.save!
+    end
+    
     
     class << self
       alias :create :new

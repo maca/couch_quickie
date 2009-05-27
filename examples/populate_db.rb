@@ -26,7 +26,7 @@ friends   = Group.new '_id' => 'Friends'
 
 persons   = [
   Person.new( '_id' => 'Michel', 'groups' => [ friends ] ),
-  Person.new( '_id' => 'Ary',    'groups' => [ family ] ),
+  Person.new( '_id' => 'Ary',    'groups' => [ family, friends, collegues ] ),
   Person.new( '_id' => 'Txema',  'groups' => [ friends, collegues ] ),
   Person.new( '_id' => 'Mom',    'groups' => [ family ] )
 ]
@@ -41,27 +41,38 @@ ary.save!
 
 
 
-design.push_view :test => {
-  :map => "function(doc) { 
-    if (doc.json_class == 'CouchQuickie::Relationship'){ 
-      emit( [doc.B.key, doc.A._id], doc.B._id ); 
-      emit( [doc.A.key, doc.B._id], doc.A._id ) 
-    } else if ( doc._associations ) {
-      for(var i in doc._associations)
-       {
-           emit( [doc._associations[i], 'mAry'], 1 );
-       }
+design.push_view :people => {
+  :map => "function(doc) {
+     if (doc.json_class == 'Person') {
+        for (var i in doc._groups) {
+           emit( doc._groups[i], doc);
+        }
+     }
+  }"
+}
+
+design.push_view :associations => {
+  :map => "function(doc) {
+    if ( doc._associations ) {
+      for (var i in doc._associations) {
+        var association = doc._associations[ i ];
+        associated = doc[ '_' + association ];
+        for (var j in associated ) {
+          var emited = {}
+          emited[ doc._joint_name ] = [doc]
+          emit( [ associated[j], doc._joint_name ], emited );
+        }
+      }
     }
   }"
-  
-  
-  # :reduce => "function( keys, values ){
-  #   return values;
-  # }"
 }
+
+
+
 design.save!
-# 
-response = db.view design.id, :test, :query => { :key => ['groups', 'Ary'] }
-# 
-puts response.to_yaml
+
+response = db.view design.id, :associations, :query => { :key => ['Txema', 'groups'] }
+
+puts response['rows'].inspect
+puts response['rows'].inject( {} ){ |final, hash| final.deep_combine( hash['value'] ) }.to_yaml
 

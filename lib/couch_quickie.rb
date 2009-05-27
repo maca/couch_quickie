@@ -11,9 +11,10 @@ require 'couch_quickie/core_ext'
 require 'couch_quickie/response'
 require 'couch_quickie/database'
 require 'couch_quickie/string_hash'
-require 'couch_quickie/document'
-require 'couch_quickie/design'
-require 'couch_quickie/relationship'
+require 'couch_quickie/document/generic'
+require 'couch_quickie/document/associations'
+require 'couch_quickie/document/base'
+require 'couch_quickie/document/design'
 
 
 module CouchQuickie
