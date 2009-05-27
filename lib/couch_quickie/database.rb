@@ -24,7 +24,9 @@ module CouchQuickie
     #   When passing false it will not parse the JSON response returning a RestClient::Response (subclass of String) that can used by
     #   JSON consumers, otherwise it will return a Ruby Hash.
     def post( doc, opts = {} )
-      http_action :post, nil, opts.merge( :doc => doc )
+      response = http_action :post, nil, opts.merge( :doc => doc )
+      doc['_id'], doc['_rev'] = response['id'], response['rev'] if doc.kind_of? Hash
+      response
     end
     
     # Updates an existing CouchDB document, <tt>doc</tt> must kind of <tt>Hash</tt> or a subclass of <tt>Document</tt>, and it must have
@@ -35,7 +37,9 @@ module CouchQuickie
     #   When passing false it will not parse the JSON response returning a RestClient::Response (subclass of String) that can used by
     #   JSON consumers, otherwise it will return a Ruby Hash.
     def put( doc, opts = {} )
-      http_action :put, doc, opts.merge( :doc => doc )
+      response = http_action :put, doc, opts.merge( :doc => doc )
+      doc['_id'], doc['_rev'] = response['id'], response['rev'] if doc.kind_of? Hash
+      response
     end
     
     # Fetches an existing CouchDB document, <tt>doc</tt> can kind of <tt>Hash</tt>, a subclass of <tt>Document</tt> (as long as they have
@@ -62,8 +66,10 @@ module CouchQuickie
     #   * rev: +String+
     #   To delete another revision rather than the latest
     def delete( doc, opts = {} )
-      rev = opts.delete(:rev)
-      http_action :delete, doc, { :query => {:rev => rev || doc['_rev'] } }.merge( opts )
+      rev         = opts.delete(:rev)
+      response    = http_action :delete, doc, { :query => {:rev => rev || doc['_rev'] } }.merge( opts )
+      doc.delete '_rev' if doc.kind_of? Hash
+      response
     end
     
     # Deletes the database and documents, use with care!. The ruby database will not have a CouchDB counterpart unless reset! is called to regenerate
@@ -140,14 +146,25 @@ module CouchQuickie
     #
     # For more info: http://wiki.apache.org/couchdb/HTTP_Bulk_Document_API
     def bulk_save( docs, opts = {} )
-      bulk = { :docs => docs }
+      parse = opts.delete :parse
+      bulk  = { :docs => docs }
       bulk[ "all_or_nothing" ] = true if opts.delete(:atomic)
-      http_action :post, '_bulk_docs', opts.merge( :doc => bulk )
+      
+      response = http_action :post, '_bulk_docs', opts.merge( :doc => bulk )
+
+      docs.zip( response ) do |pair|
+        doc, response = pair
+        doc['_id']    = response['id']
+        doc['_rev']   = response['rev']
+      end
+      
+      parse ? response : response.to_json
     end
     
     # Returns the number of documents for the CouchDB database.
     def count; info['doc_count']; end
     
+    # Returns the database url
     def to_s; @url; end
     
     private
@@ -165,14 +182,14 @@ module CouchQuickie
         response = RestClient.send *args
       rescue RestClient::ExceptionWithResponse => e
         response = e.response.to_ary[1] 
-        raise CouchQuickie::CouchDBError.new( "#{args[1]}: #{response}" ) # what couchdb has to say?
+        raise CouchQuickie::CouchDBError.new( JSON.parse( response ).merge( :url => args[1] ).to_json ) # what couchdb has to say?
       end
       
       parse ? JSON.parse( response ) : response
     end
     
     def create_shared_design
-      @design = Design.new( '_id' => '_design/shared', :database => self )
+      @design = Document::Design.new( '_id' => '_design/shared', :_database => self )
       @design.push_view :associated => {
         :map => "function(doc) {
           if ( doc._associations ) {

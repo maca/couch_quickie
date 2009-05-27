@@ -1,9 +1,9 @@
-require File.dirname(__FILE__) + '/spec_helper.rb'
-
-class Book < CouchQuickie::Document; end
+require File.dirname(__FILE__) + '/../spec_helper.rb'
 
 include CouchQuickie  
 include Document
+
+class Book < Document::Base; end
 
 describe Document::Design, 'for document class' do
   before do
@@ -26,10 +26,6 @@ describe Document::Design, 'for document class' do
   
   it "should require an id starting with _design" do
     lambda{ Design.new( '_id' => 'id') }.should raise_error(ArgumentError)
-  end
-  
-  it "should not have a design" do
-    Design.design.should be_nil #no design for designs
   end
   
   it "should have views" do
@@ -90,7 +86,14 @@ describe Document::Design, 'for document class' do
     
     it "should save" do
       @design.save!
+      @design.should be_saved
       @design.database.get( @design )['_id'].should == @design['_id']
+    end
+    
+    it "should delete" do
+      @design.save!
+      @design.delete!
+      @design.should be_new_document
     end
   end
 end

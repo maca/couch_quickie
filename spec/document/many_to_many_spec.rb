@@ -1,23 +1,30 @@
 
-require File.dirname(__FILE__) + '/spec_helper.rb'
+require File.dirname(__FILE__) + '/../spec_helper.rb'
 require 'benchmark'
 
 include CouchQuickie
 Database.new('http://127.0.0.1:5984/many_to_many_spec').delete! rescue nil
 
-class Person < Document
+class Document::Design
+  def reset!
+    delete('_rev')
+    self
+  end
+end
+
+class Person < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
   joins :groups, :phones
   design.save!
 end
 
-class Group < Document
+class Group < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
   joins :people
   design.save!
 end
 
-class Phone < Document
+class Phone < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
   joins :people
   design.save!
@@ -80,8 +87,8 @@ describe 'many to many' do
       it "should get related groups using shared design" do
         @ary.save!
         @michel.save!
-        Person.get_related  ( :key => [@ary.id, 'groups'] )['groups'].should == [ @collegues, @family, @friends ].map{ |g| g.delete(:people); g }
-        Person.get_related  ( :key => [@michel.id, 'groups'] )['groups'].should == [ @friends ].map{ |g| g.delete(:people); g }
+        Person.get_related( :key => [@ary.id, 'groups'] )['groups'].should == [ @collegues, @family, @friends ].map{ |g| g.delete(:people); g }
+        Person.get_related( :key => [@michel.id, 'groups'] )['groups'].should == [ @friends ].map{ |g| g.delete(:people); g }
       end
       
       it "should update with view" do
@@ -121,10 +128,7 @@ describe 'many to many' do
       it_should_behave_like 'related'
     end
   end
-  
-  # http://127.0.0.1:5984/many_to_many_spec/_design/relationships/_view/by_person_ids?startkey=[%22Ary%22]&endkey=[%22Ary%22,{}]
-  # Group associations ids: function(doc){ if(doc.json_class == 'CouchQuickie::Relationship'){ emit([doc.Person, doc.Group], doc._id) }; }
-  
+
   describe Group do
     # it "create accessors" do
     #   @friends.should respond_to( :persons )

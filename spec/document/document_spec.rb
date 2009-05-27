@@ -1,10 +1,11 @@
-require File.dirname(__FILE__) + '/spec_helper.rb'
+require File.dirname(__FILE__) + '/../spec_helper.rb'
 # require File.join(FIXTURES, 'obj')
 
 Database.new('http://127.0.0.1:5984/doc_spec').delete! rescue nil
 
+include CouchQuickie
 
-class Calendar < CouchQuickie::Document
+class Calendar < Document::Base
   set_database 'http://127.0.0.1:5984/doc_spec'
   
   def monday=( whatever )
@@ -12,9 +13,7 @@ class Calendar < CouchQuickie::Document
   end
 end
 
-include CouchQuickie
-
-describe Document do  
+describe Document::Base do  
   
   describe 'JSON parsing' do
     before do
@@ -23,7 +22,7 @@ describe Document do
     
     shared_examples_for 'parsed document' do
       it "it should parse to ruby" do
-        @calendar.should be_kind_of( Document )
+        @calendar.should be_kind_of( Document::Base )
         @calendar.should be_instance_of( Calendar )
       end
       
@@ -56,14 +55,14 @@ describe Document do
       @doc = Calendar.new( @calendar )
     end
 
-    it "should should return instance on Document on #merge" do
+    it "should should return instance on Document::Base on #merge" do
       merge = Calendar.new( @calendar ).merge( @friday )
       merge.delete('_id').should_not be_nil
       merge.should == @calendar.merge( @friday )
       merge.should be_instance_of( Calendar )
     end
 
-    it "should should return instance on Document on #merge!" do
+    it "should should return instance on Document::Base on #merge!" do
       merge = Calendar.new( @calendar ).merge!( @friday )
       merge.delete('_id').should_not be_nil
       merge.should == @calendar.merge( @friday )
@@ -110,6 +109,7 @@ describe Document do
     it "should reset pristine copy when deleting" do
       @doc.save!
       @doc.should_not be_changed
+
       @doc.merge!( 'monday' => 'you can fall apart' )
       @doc.delete!
       @doc.should_not be_changed
@@ -140,7 +140,7 @@ describe Document do
         Calendar.database.info['db_name'].should == 'calendars'
       end 
             
-      describe Document, 'save, update and delete' do
+      describe Document::Base, 'save, update and delete' do
         before do
           @calendar = Calendar.new( JSON.parse( JSON_CALENDAR ).merge( 'json_class' => nil ) )
           @db = @calendar.database
@@ -194,14 +194,14 @@ describe Document do
   describe 'Designs' do
     before :all do
       Database.new("http://localhost:5984/bookstore_specs").delete! rescue nil
-      class Book < Document
+      class Book < Document::Base
         set_database "http://localhost:5984/bookstore_specs"
       end
     end
 
     it "should have a design" do
       design = Book.design
-      design.should be_instance_of( Design )
+      design.should be_instance_of( Document::Design )
       design['document_class'].should == 'Book'
     end
     

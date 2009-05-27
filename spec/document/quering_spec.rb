@@ -1,13 +1,13 @@
-require File.dirname(__FILE__) + '/spec_helper.rb'
+require File.dirname(__FILE__) + '/../spec_helper.rb'
 
 include CouchQuickie
 Database.new('http://127.0.0.1:5984/bookstore_spec').delete! rescue nil
 
-class Book < CouchQuickie::Document
+class Book < Document::Base
   set_database 'http://127.0.0.1:5984/bookstore_spec'
 end
 
-class Magazine < CouchQuickie::Document
+class Magazine < Document::Base
   set_database 'http://127.0.0.1:5984/bookstore_spec'
 end
 
@@ -30,7 +30,7 @@ describe 'Book quering' do
   end
   
   it "should find all Books" do
-    Book.get( :all ).sort_by( :title ).should == @books
+    Book.get( :all ).sort_by{ |b| b['title'] }.should == @books
   end
   
   it "should get by id" do

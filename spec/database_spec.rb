@@ -10,7 +10,11 @@ describe Database do
   end
   
   after do
-    @db.reset! rescue nil
+    @db.reset!
+  end
+  
+  after :all do
+    @db.delete!
   end
    
   def get( url )
@@ -36,16 +40,12 @@ describe Database do
     it "should create a document" do
       response = @doc['_id'] ? @db.put( @doc ) : @db.post( @doc )
       doc = get( "#{@url}/#{response['id']}" )
-      doc.delete( '_id').should_not be_nil unless @doc['_id'] =~ /design/
-      doc.delete('_rev').should_not be_nil
       doc.should == @doc
     end
   
     it "should get a document" do
       response = @doc['_id'] ? @db.put( @doc ) : @db.post( @doc )
       doc = @db.get( response['id'] )
-      doc.delete( '_id').should_not be_nil unless @doc['_id'] =~ /design/
-      doc.delete('_rev').should_not be_nil
       doc.should == @doc
     end
   
@@ -74,15 +74,15 @@ describe Database do
     it "should update document" do
       response = @db.post @doc
       doc      = @db.get  response
-      new_response = @db.put( doc.merge('today' => Date.today + 1) )
-      @db.get( new_response )['today'].should == Date.today + 1
-      @db.count.should == 1
+      lambda do
+        new_response = @db.put( doc.merge('today' => Date.today + 1) )
+        @db.get( new_response )['today'].should == Date.today + 1
+      end.should_not change( @db, :count )
     end
     
     it "should delete a document" do
       doc = @db.get @db.post( @doc )
-      @db.delete doc
-      @db.count.should == 0
+      lambda{ @db.delete doc }.should change( @db, :count ).by( -1 )
     end
   end
   
@@ -122,9 +122,16 @@ describe Database do
     end
     
     it "should bulk_save an array" do
-      lambda {
-        @db.bulk_save @docs, :atomic => true
-      }.should change( @db, :count ).by(3)
+      lambda{ @db.bulk_save @docs }.should change( @db, :count ).by(3)
     end
+    
+    it "should update _rev and _id on bulk save" do
+      @db.bulk_save @docs
+      for doc in @docs
+        doc['_rev'].should_not be_nil
+        doc['_id'].should_not be_nil
+      end
+    end
+    
   end
 end

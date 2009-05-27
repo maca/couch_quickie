@@ -1,2 +1,2 @@
-class Calendar < CouchQuickie::Document
+class Calendar < CouchQuickie::Document::Base
 end

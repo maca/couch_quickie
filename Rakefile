@@ -30,4 +30,5 @@ Dir['tasks/**/*.rake'].each { |t| load t }
 Spec::Rake::SpecTask.new do |t|
   t.spec_opts = ['--color']
 end
+
 task :default => :spec
