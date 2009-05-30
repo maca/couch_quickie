@@ -106,20 +106,29 @@ module CouchQuickie
       http_action :get, nil, opts
     end
     
-    # GETs the result of a view by name.
+    # GETs the result of a view by name or if +keys+ option is passed POSTs the keys to the view. 
     #
     # Options:
     #   * parse: +false+
     #   When passing false it will not parse the JSON response returning a RestClient::Response (subclass of String) that can used by
     #   JSON consumers, otherwise it will return a Ruby Hash.
+    #   * keys: +Array+
+    #   An array of keys can be passed in order to restrict the results to documents corresponding to those keys.
     #   * query: +Hash+
-    #   Additional query parameters
+    #   Additional query parameters.
     #   eg. { :query => {:key => 'Person', :group => true} }
-    def view( design, view, opts = {})
-      http_action :get, "#{design}/_view/#{view}", opts
+    #
+    # More info on views in the CouchDB wiki.
+    def view( design, view, opts = {} )
+      keys = opts.delete( :keys )
+      if keys
+        http_action :post, "#{design}/_view/#{view}", opts.merge( :doc => {:keys => keys} ) 
+      else
+        http_action :get,  "#{design}/_view/#{view}", opts
+      end
     end
     
-    # POSTs a temporary slow view in the database, should not be used in production as it can get slow for large databases
+    # POSTs a temporary view in the database, should not be used in production as it can get slow for large databases
     #
     # Options:
     #   * parse: +false+
@@ -132,7 +141,7 @@ module CouchQuickie
       http_action :post, '_temp_view', opts.merge( :doc => view, :content => 'application/json' )
     end
     
-    # Bulk updates/saves an array of documents
+    # Bulk updates/saves/deletes an array of documents
     #
     # Options:
     #   * atomic: +true+
@@ -140,7 +149,7 @@ module CouchQuickie
     #   The response will tell the application which documents were saved or not. In the case of a power failure, 
     #   when the database restarts some may have been saved and some not.
     #
-    #   If passing atomic => true in the case of a power failure, when the database restarts either all the changes will have been 
+    #   If passing true in the case of a power failure, when the database restarts either all the changes will have been 
     #   saved or none of them. 
     #   However, it does not do conflict checking, so the documents will be committed even if this creates conflicts.
     #
@@ -148,7 +157,7 @@ module CouchQuickie
     def bulk_save( docs, opts = {} )
       parse = opts.delete :parse
       bulk  = { :docs => docs }
-      bulk[ "all_or_nothing" ] = true if opts.delete(:atomic)
+      bulk[ "all_or_nothing" ] = true if opts.delete(:atomic) == true
       
       response = http_action :post, '_bulk_docs', opts.merge( :doc => bulk )
 
@@ -207,7 +216,6 @@ module CouchQuickie
       }
       @design.save!
     end
-    
     
     class << self
       alias :create :new

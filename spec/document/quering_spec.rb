@@ -49,6 +49,10 @@ describe 'Book quering' do
     Book.get( :count ).should == @books.size
   end
   
+  it "should get books by ids" do
+    Book.get( @books[0..1].collect(&:id) ).should == @books[0..1]
+  end
+  
   it "should raise error when passing nil"
     
   after :all do

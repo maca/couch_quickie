@@ -2,7 +2,6 @@
 # Provides a simple and generic way of (de)serializing JSON representations of an Object, hopefully it will restore
 # the object to the state prior to serializing.
 class Object
-  
   # Encodes all instance variables to JSON
   def self.json_create( object )
     obj = allocate
@@ -16,7 +15,6 @@ class Object
   def to_a
     [self]
   end
-  
 end
 
 class Array

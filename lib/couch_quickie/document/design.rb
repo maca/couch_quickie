@@ -11,15 +11,15 @@ module CouchQuickie
         self['views'] ||= {}
         raise ArgumentError, "Expected views attribute to be a Hash, got a #{ views.class }" unless self['views'].instance_of? Hash    
         
-        
         if self['document_class']
           push_view 'all'   => { 'map' => "function(doc) { if(doc.json_class == '#{ self['document_class'] }'){ emit(doc._id, doc); } }" }
           push_view 'count' => { 
-            'map'    => "function(doc) { if(doc.json_class == '#{ self['document_class'] }'){ emit(null, 1); } }",
+            'map'    => "function(doc) { if(doc.json_class == '#{ self['document_class'] }'){ emit(doc._id, 1); } }",
             'reduce' => "function(keys, values) { return sum(values); } " 
           }
         end
         
+        self['json_class'] = self.class.to_s
         @database = delete :_database
         pristine_copy
       end
@@ -37,14 +37,6 @@ module CouchQuickie
         response
       end
 
-      private
-      def set_default_id
-        
-      end
-
-      def set_views
-        
-      end
     end
   end
 end

@@ -209,9 +209,9 @@ describe Document::Base do
       Book.design.database.should == Book.database
     end
     
-    it "should save the design" do
+    it "should save and get the design" do
       Book.design.should_not be_new_document
-      Book.database.get( Book.design )['_id'].should == Book.design['_id']
+      Book.database.get( "_design/book" ).should == Book.design
     end
   end
   

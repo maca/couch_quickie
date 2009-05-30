@@ -14,19 +14,19 @@ end
 
 class Person < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
-  joins :groups, :phones
+  has_and_belongs_to_many :groups, :phones
   design.save!
 end
 
 class Group < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
-  joins :people
+  habtm :people
   design.save!
 end
 
 class Phone < Document::Base
   set_database 'http://127.0.0.1:5984/many_to_many_spec'
-  joins :people
+  habtm :people
   design.save!
 end
 
@@ -87,13 +87,10 @@ describe 'many to many' do
       it "should get related groups using shared design" do
         @ary.save!
         @michel.save!
-        Person.get_related( :key => [@ary.id, 'groups'] )['groups'].should == [ @collegues, @family, @friends ].map{ |g| g.delete(:people); g }
-        Person.get_related( :key => [@michel.id, 'groups'] )['groups'].should == [ @friends ].map{ |g| g.delete(:people); g }
+        @ary.get_related( 'groups' )['groups'].should == [ @collegues, @family, @friends ].map{ |g| g.delete(:people); g }
+        @michel.get_related( 'groups' )['groups'].should == [ @friends ].map{ |g| g.delete(:people); g }
       end
-      
-      it "should update with view" do
-        
-      end
+
     end
     
     describe 'with given id' do

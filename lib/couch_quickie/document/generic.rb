@@ -4,7 +4,10 @@ module CouchQuickie
       attr_reader :database, :pristine
       
       def initialize( hash = {} )
-        super hash.dup
+        hash = hash.dup
+        assign_with_writers hash
+        hash['json_class'] = self.class.to_s
+        super
         pristine_copy
       end
       
@@ -59,6 +62,17 @@ module CouchQuickie
           @pristine[key] = 
           val.dup rescue val
         end
+      end
+
+      def assign_with_writers( hash )
+        for key, val in hash
+          writer = "#{key}="
+          self.send writer, hash.delete( key ) if self.respond_to? writer
+        end
+      end
+    
+      class << self
+        alias :json_create :new
       end
     end
   end

@@ -5,15 +5,16 @@ require 'benchmark'
 include CouchQuickie
 $db = Database.new( 'http://127.0.0.1:5984/many_to_many_example' )
 $db.reset! # errase and recreate the database in case there are any docs
+# $db.delete!
 
 
-class Person < Document
+class Person < Document::Base
   set_database $db
   joins :groups
   design.save!
 end
 
-class Group < Document
+class Group < Document::Base
   set_database $db
   joins :people
   design.save!
