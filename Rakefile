@@ -23,7 +23,7 @@ $hoe = Hoe.new('couch_quickie', CouchQuickie::VERSION) do |p|
   
   p.clean_globs |= %w[**/.DS_Store tmp *.log]
   # path = (p.rubyforge_name == p.name) ? p.rubyforge_name : "\#{p.rubyforge_name}/\#{p.name}"
-  p.remote_rdoc_dir = File.join(path.gsub(/^#{p.rubyforge_name}\/?/,''), 'rdoc')
+  # p.remote_rdoc_dir = File.join(path.gsub(/^#{p.rubyforge_name}\/?/,''), 'rdoc')
   p.rsync_args = '-av --delete --ignore-errors'
 end
 
