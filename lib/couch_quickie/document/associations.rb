@@ -26,7 +26,7 @@ module CouchQuickie
             end
           end
 
-          docs.flatten.reject{ |doc| doc.pristine? and doc.saved? }
+          docs.flatten.compact.reject{ |doc| doc.pristine? and doc.saved? }
         end
         
         def associations; self.class.associations; end

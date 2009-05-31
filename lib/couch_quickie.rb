@@ -6,6 +6,7 @@ require 'rest_client'
 require 'active_support/inflector'
 require 'uuid'
 require 'delegate'
+# p caller
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 require 'couch_quickie/core_ext'
@@ -22,6 +23,22 @@ module CouchQuickie
   VERSION = '0.0.1'
 
   class << self
+    def assets_dir= dir
+      @assets_dir = dir
+    end
+    
+    def assets_dir
+      @assets_dir
+    end
+    
+    def validation_file( name )
+      File.read File.join( assets_dir, 'validations', "#{name}.js" )
+    end
+    
+    def view_file( name )
+      File.read File.join( assets_dir, 'views', "#{name}.js" )
+    end
+            
     def build_url( base, doc, query = nil )
       doc = doc['_id'] || doc['id'] if doc.kind_of? Hash
       url = "#{ base }/#{ doc }"
@@ -45,5 +62,19 @@ module CouchQuickie
     end
   end
 
-  class CouchDBError < StandardError; end
+  class CouchDBError < StandardError
+    attr_reader :response, :url
+    
+    def initialize(response, url)
+      @response, @url = response, url
+    end
+
+    def response
+      response = *JSON.parse( @response )
+    end
+    
+    def to_s
+      { :url => url, :response => response }.inspect
+    end
+  end
 end

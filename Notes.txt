@@ -1,6 +1,3 @@
 TODO: 
 - Deep merge queries
-- :query => { :group => true } default for view getting
 - Response refactoring
-
-- Blows when specifying an association but empty

@@ -191,7 +191,7 @@ module CouchQuickie
         response = RestClient.send *args
       rescue RestClient::ExceptionWithResponse => e
         response = e.response.to_ary[1] 
-        raise CouchQuickie::CouchDBError.new( JSON.parse( response ).merge( :url => args[1] ).to_json ) # what couchdb has to say?
+        raise CouchQuickie::CouchDBError.new( response, args[1] ) # what couchdb has to say?
       end
       
       parse ? JSON.parse( response ) : response
