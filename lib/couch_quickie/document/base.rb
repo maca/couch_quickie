@@ -1,4 +1,3 @@
-
 module CouchQuickie
   module Document
     class Base < Document::Generic
@@ -7,7 +6,7 @@ module CouchQuickie
       include Document::Validation
 
       # Expects an attributes hash
-      def initialize( hash = {} )
+      def initialize hash = {}
         self['_id']         ||= @@uuid.generate   unless self.class == Design
         self['_associations'] = associations.keys unless associations.empty?
         self['_joint_name']   = self.class.to_s.pluralize.downcase
@@ -18,13 +17,13 @@ module CouchQuickie
       # Will raise an error if the database or updating document does not exists or any other problem occurs.
       # Options:
       #  Atomic, validate, depth
-      def save!( opts = {} )
+      def save! opts = {}
         docs     = prepare_to_save_with_associations
         response = database.bulk_save docs, { :atomic => true }.merge( opts )
         pristine_copy
         response
       end
-      
+
       def delete!
         response = database.delete self
         pristine_copy
@@ -40,7 +39,7 @@ module CouchQuickie
 
       def <=> other; id <=> other.id; end
       
-      def to_json( depth = 1 )
+      def to_json depth = 1
         copy = self.dup
         associations.keys.each do |name| copy.delete name end
         {}.merge( copy ).to_json
@@ -57,31 +56,30 @@ module CouchQuickie
 
         # Key can be a Symbol, String or Document Hash, if key is a Symbol it will get all the documents emited by a view
         # of that name otherwise it will get the requested document by id.
-        def get( key, opts = {} )
+        def get key, opts = {}
           case key
           when Symbol: design.get key,  opts
           when Array:  design.get :all, opts.merge( :keys => key )
           else
-            database.get( key, opts )
+            database.get key, opts
           end
         end
 
         protected
         # Sets the database for the Document Class and the associated <tt>Design</tt>
-        def set_database( database )
+        def set_database database
           @database        = database.kind_of?( Database ) ? database : Database.new( database )
           @design.database = @database
           @design.save!
         end
 
         def init_class_instance_variables #:nodoc:
-          @design = Design.new 'document_class' => self.to_s
+          @design       = Design.new 'document_class' => self.to_s
           @associations = {}
         end
 
-        def inherited( klass ) #:nodoc:
+        def inherited klass #:nodoc:
           klass.init_class_instance_variables #associations are not inherited
-          klass.set_database self.database if self.database
         end      
       end
     end

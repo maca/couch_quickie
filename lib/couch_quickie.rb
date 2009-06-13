@@ -6,7 +6,6 @@ require 'rest_client'
 require 'active_support/inflector'
 require 'uuid'
 require 'delegate'
-# p caller
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 require 'couch_quickie/core_ext'
@@ -31,23 +30,23 @@ module CouchQuickie
       @assets_dir
     end
     
-    def validation_file( name )
+    def validation_file name
       File.read File.join( assets_dir, 'validations', "#{name}.js" )
     end
     
-    def view_file( name )
+    def view_file name
       File.read File.join( assets_dir, 'views', "#{name}.js" )
     end
             
-    def build_url( base, doc, query = nil )
-      doc = doc['_id'] || doc['id'] if doc.kind_of? Hash
-      url = "#{ base }/#{ doc }"
+    def build_url base, doc, query = nil
+      doc  = doc['_id'] || doc['id'] if doc.kind_of? Hash
+      url  = "#{ base }/#{ doc }"
       url << "?" << build_query( query ) if query
       url
     end
 
     # Addapted from Rack
-    def build_query( params )
+    def build_query params
       params.map do |key, val|
         val = escape( val.to_json ) unless key.to_sym == :rev
         "#{key}=#{val}"
@@ -55,7 +54,7 @@ module CouchQuickie
     end
 
     # From Rack from Camping
-    def escape( s )
+    def escape s
       s.to_s.gsub(/([^ a-zA-Z0-9_.-]+)/n) do
         '%'+$1.unpack('H2'*$1.size).join('%').upcase
       end.tr(' ', '+')
@@ -65,7 +64,7 @@ module CouchQuickie
   class CouchDBError < StandardError
     attr_reader :response, :url
     
-    def initialize(response, url)
+    def initialize response, url
       @response, @url = response, url
     end
 

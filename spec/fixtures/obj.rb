@@ -7,11 +7,11 @@ class Obj
     [@uno, @dos, @tres, @cuatro, @cinco]
   end
   
-  def ==( other )
+  def == other
     giv( self ) == giv( other )
   end
   
-  def giv( obj )
+  def giv obj
     obj.instance_variables.collect do |var| 
       obj.send :instance_variable_get, var
     end

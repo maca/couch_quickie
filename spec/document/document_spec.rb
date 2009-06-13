@@ -1,19 +1,23 @@
 require File.dirname(__FILE__) + '/../spec_helper.rb'
-# require File.join(FIXTURES, 'obj')
-
-Database.new('http://127.0.0.1:5984/doc_spec').delete! rescue nil
 
 include CouchQuickie
+Database.new('http://127.0.0.1:5984/doc_spec').reset!
+Database.new("http://localhost:5984/calendars").reset!
+
 
 class Calendar < Document::Base
   set_database 'http://127.0.0.1:5984/doc_spec'
-  
-  def monday=( whatever )
+  def monday= whatever
     self['monday'] = 'you can fall apart'
   end
 end
 
 describe Document::Base do  
+
+  after :all do
+    Database.new("http://localhost:5984/doc_specs").delete!
+    Database.new("http://localhost:5984/calendars").delete!
+  end
   
   describe 'JSON parsing' do
     before do
@@ -116,80 +120,76 @@ describe Document::Base do
     end
   end
   
-  describe 'Database creation and interaction' do
-    before :all do
-      @database  = "http://localhost:5984/calendars"
-      @database2 = "http://localhost:5984/calendars2"
-      Calendar.send :set_database, @database
-      class OtherCalendar < Calendar; end
+  describe Document::Base, 'save, update and delete' do
+    before do
+      @calendar = Calendar.new( JSON.parse( JSON_CALENDAR ).merge( 'json_class' => nil ) )
+      @db       = @calendar.database
     end
-        
-    describe 'database inheritance' do
-      it "should create database" do
-        Calendar.database.url.should == @database
-        Calendar.database.info['db_name'].should == 'calendars'
-      end
     
-      it "should inherit database" do
-        OtherCalendar.database.info['db_name'].should == 'calendars'
-      end
+    after do
+      Calendar.database.reset!
+    end
+
+    it "should get database for instance" do
+      @calendar.database.info['db_name'].should == 'doc_spec'
+    end
     
-      it "should set new database only for current class" do
-        OtherCalendar.send :set_database, @database2
-        OtherCalendar.database.info['db_name'].should == 'calendars2'
-        Calendar.database.info['db_name'].should == 'calendars'
-      end 
-            
-      describe Document::Base, 'save, update and delete' do
-        before do
-          @calendar = Calendar.new( JSON.parse( JSON_CALENDAR ).merge( 'json_class' => nil ) )
-          @db = @calendar.database
-        end
-        
-        after do
-          Calendar.database.reset!
-        end
-   
-        it "should get database for instance" do
-          @calendar.database.info['db_name'].should == 'calendars'
-        end
-        
-        it 'should be new document' do
-          @calendar.should be_new_document
-        end
-        
-        it "should save" do
-          lambda { @calendar.save! }.should change( @db, :count ).by(1)
-          @calendar.should_not be_new_document
-          fetched = @db.get( @calendar )
-          fetched.should == @calendar
-          fetched.should be_instance_of(Calendar)
-        end
-        
-        it "should update" do
-          @calendar.save!
-          lambda { @calendar.merge!('monday' => 'you can fall apart').save! }.should_not change( @db, :count )
-          @db.get( @calendar )['monday'].should == 'you can fall apart'
-        end
-        
-        it "should delete" do
-          @calendar.save!
-          @calendar.should_not be_new_document
-          lambda { @calendar.delete! }.should change( @db, :count ).by(-1)
-          @calendar.should be_new_document
-          @calendar['_rev'].should be_nil
-        end
-        
-        it "should save with a given id" do
-          @calendar.merge!( '_id' => 'my_cal' )
-          @calendar.should be_new_document
-          lambda { @calendar.save! }.should change( @db, :count ).by(1)
-          @calendar.should_not be_new_document
-          @db.get( @calendar )[ '_id' ].should == 'my_cal'
-        end
-      end
+    it 'should be new document' do
+      @calendar.should be_new_document
+    end
+    
+    it "should save" do
+      lambda { @calendar.save! }.should change( @db, :count ).by(1)
+      @calendar.should_not be_new_document
+      fetched = @db.get( @calendar )
+      fetched.should == @calendar
+      fetched.should be_instance_of(Calendar)
+    end
+    
+    it "should update" do
+      @calendar.save!
+      lambda { @calendar.merge!('monday' => 'you can fall apart').save! }.should_not change( @db, :count )
+      @db.get( @calendar )['monday'].should == 'you can fall apart'
+    end
+    
+    it "should delete" do
+      @calendar.save!
+      @calendar.should_not be_new_document
+      lambda { @calendar.delete! }.should change( @db, :count ).by(-1)
+      @calendar.should be_new_document
+      @calendar['_rev'].should be_nil
+    end
+    
+    it "should save with a given id" do
+      @calendar.merge!( '_id' => 'my_cal' )
+      @calendar.should be_new_document
+      lambda { @calendar.save! }.should change( @db, :count ).by(1)
+      @calendar.should_not be_new_document
+      @db.get( @calendar )[ '_id' ].should == 'my_cal'
     end
   end
+  
+  # describe 'Database creation and interaction' do
+  #     before :all do
+  #       @database2 = "http://localhost:5984/calendars"
+  #       class OtherCalendar < Calendar; end
+  #     end
+  #         
+  #     describe 'database inheritance' do
+  #       it "should create database" do
+  #         Calendar.database.info['db_name'].should == 'doc_spec'
+  #       end
+  #     
+  #       it "should inherit database" do
+  #         OtherCalendar.database.info['db_name'].should == 'doc_spec'
+  #       end
+  #     
+  #       it "should set new database only for current class" do
+  #         OtherCalendar.send :set_database, @database2
+  #         OtherCalendar.database.info['db_name'].should == 'calendars'
+  #       end
+  #     end
+  #   end
   
   describe 'Designs' do
     before :all do
@@ -213,6 +213,6 @@ describe Document::Base do
       Book.design.should_not be_new_document
       Book.database.get( "_design/book" ).should == Book.design
     end
-  end
-  
+  end  
 end
+

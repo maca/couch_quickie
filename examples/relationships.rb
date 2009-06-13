@@ -39,6 +39,7 @@ ary    = persons[1]
 michel.save!
 ary.save!
 
+ary = $db.get( ary )
 
 puts "\nGroups for ary"
 puts ary.groups.to_yaml
