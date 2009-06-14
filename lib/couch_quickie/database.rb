@@ -180,7 +180,7 @@ module CouchQuickie
     def http_action( method, doc_url, opts = {} ) #:nodoc:
       query    = opts.delete(:query)
       document = opts.delete(:doc)
-      parse    = opts.delete(:parse)
+      parse    = opts[:parse] || opts.delete(:parse).nil? # only not passing the :parse option or :parse => nil will not parse
       content  = opts.delete(:content)
 
       args = [ method, CouchQuickie.build_url( @url, doc_url, query ) ]

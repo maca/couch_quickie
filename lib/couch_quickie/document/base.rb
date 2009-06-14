@@ -58,8 +58,8 @@ module CouchQuickie
         # of that name otherwise it will get the requested document by id.
         def get key, opts = {}
           case key
-          when Symbol: design.get key,  opts
-          when Array:  design.get :all, opts.merge( :keys => key )
+          when Symbol then design.get key,  opts
+          when Array  then design.get :all, opts.merge( :keys => key )
           else
             database.get key, opts
           end

@@ -1,3 +1,5 @@
+# coding: utf-8
+
 require 'rubygems'
 require 'json'
 require 'json/add/core'
@@ -6,8 +8,13 @@ require 'rest_client'
 require 'active_support/inflector'
 require 'uuid'
 require 'delegate'
+# require 'ruby2js'
+require 'ruby_parser'
 
 $:.unshift(File.dirname(__FILE__)) unless $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+
+require '/Users/macario/Gems/ruby_to_js/lib/ruby2js'
+
 require 'couch_quickie/core_ext'
 require 'couch_quickie/response'
 require 'couch_quickie/database'
@@ -15,6 +22,7 @@ require 'couch_quickie/string_hash'
 require 'couch_quickie/document/generic'
 require 'couch_quickie/document/associations'
 require 'couch_quickie/document/validation'
+require 'couch_quickie/document/validation/validation'
 require 'couch_quickie/document/base'
 require 'couch_quickie/document/design'
 

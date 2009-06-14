@@ -88,3 +88,14 @@ class Symbol
     Proc.new { |obj, *args| obj.__send__(self, *args) }
   end
 end
+
+
+class SafeRubyParser < RubyParser
+  def on_error t, val, vstack
+    @rescue = vstack.first
+  end
+
+  def parse str, file = "(string)"
+    super || @rescue
+  end
+end
