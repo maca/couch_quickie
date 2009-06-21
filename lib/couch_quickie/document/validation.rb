@@ -2,16 +2,7 @@ module CouchQuickie
   module Document
     module Validation
       
-      VALIDATIONS = {
-        :must_be_present => 
-%(
-function must_be_present(args){
-  for ( var i in args.values ) {
-    var key = args.values[i]
-    if (!doc[key]) errors.add( key, args.message || "can't be blank" )
-  }
-})
-      }
+    
 
       def self.included base
         base.send :extend, ClassMethods
@@ -30,19 +21,41 @@ function must_be_present(args){
 
           sexp  = SafeRubyParser.new.parse( source[line..-1].join )
           sexp  = sexp.assoc(:iter) || sexp
-          calls = []
           
-          body  = Ruby2JS.new( sexp.pop, :implicit_ret => false, :pretty_print => true ) do |sexp|
+          val_args = sexp.find_nodes :lasgn
+          val_args = sexp.find_node(:masgn).last.find_nodes(:lasgn) if val_args.empty?
+          val_args.each { |val| val[0] = :lvar  }
+          
+          body     = Ruby2JS.new( sexp.pop, :implicit_ret => false, :pretty_print => true ) do |sexp|
             next sexp unless sexp.first == :call
-            next sexp unless VALIDATIONS.keys.include? sexp[2]            
-            calls  << sexp[2]
-            args    = sexp.pop
-            args[0] = :array
-            sexp.push ( args.find_node(:hash, true) || s(:hash) ).push( s(:lit, :values), args )
+            case sexp[2]
+            when :must_be_present
+              args    = sexp.pop
+              message = s(:str, "can't be blank")
+              if opts = args.find_node(:hash, true)
+                if index  = opts.index( s(:lit, :message) )
+                  message = opts[index + 1]
+                end
+              end
+              args = args[1..-1].collect! do |cond|
+                attribute = cond[2] == :[] ? cond.last.last.dup : s(:str, cond[2])
+                s(:if, s(:not, cond), s(:call, s(:lvar, :errors), :add, s(:arglist, attribute, message.dup) ), nil)
+              end
+              args.unshift :block
+            else
+              if val_args.include?( sexp[1] )
+                next sexp if sexp[2] == :[] or sexp.last.size > 1
+                s(:source, "#{ sexp[1].last }.#{ sexp[2] }")
+              else
+                sexp
+              end
+            end
+              
+
           end.to_js
-                    
+          
           puts design['validate_doc_update'] = 
-%(function(#{ sexp[2].last[1..-1].collect{ |e| e.last.to_s }.join(', ') }) {
+%(function(#{ val_args.collect{ |arg| arg.last }.join(', ') }) {
   
   function Errors() {};
 
@@ -59,7 +72,6 @@ function must_be_present(args){
   };
   
   var error = new Errors;
-  #{ calls.uniq.collect{ |c| VALIDATIONS[c] }.join(";\n") };
   
   #{ body }
 }  
